@@ -1,0 +1,7 @@
+[package]
+name = "archi"
+version = "0.1.0"
+authors = ["iwikal <e.joel.nordstrom@gmail.com>"]
+
+[dependencies]
+sdl2 = "*"
