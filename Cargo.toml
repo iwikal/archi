@@ -5,3 +5,4 @@ authors = ["iwikal <e.joel.nordstrom@gmail.com>"]
 
 [dependencies]
 sdl2 = "*"
+gl = "*"
