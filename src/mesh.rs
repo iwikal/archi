@@ -1,6 +1,5 @@
 extern crate glm;
 
-use std::mem;
 use std::ptr;
 use std::ffi::CString;
 use gl::types::*;
@@ -13,40 +12,41 @@ pub struct Vertex {
 pub struct Mesh {
     vao: GLuint,
     elements: GLsizei,
-    program: GLuint
+    pub program: Shader,
 }
 
-pub fn new (vertices: &[Vertex], indices: &[GLushort], program: Shader) -> Mesh {
+pub fn new (vertices: &[Vertex],
+            indices: &[GLushort],
+            program: Shader) -> Mesh {
     let mut vao = 0;
     let mut vbo = 0;
     let mut ebo = 0;
 
     unsafe {
+        use std::mem::{ size_of, transmute };
         gl::CreateVertexArrays(1, &mut vao);
         gl::BindVertexArray(vao);
         gl::CreateBuffers(1, &mut vbo);
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            (vertices.len() * mem::size_of::<Vertex>()) as GLsizeiptr,
-            mem::transmute(&vertices[0]),
-            gl::STATIC_DRAW
-            );
+            (vertices.len() * size_of::<Vertex>()) as GLsizeiptr,
+            transmute(&vertices[0]),
+            gl::STATIC_DRAW);
 
         gl::CreateBuffers(1, &mut ebo);
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(
             gl::ELEMENT_ARRAY_BUFFER,
-            (indices.len() * mem::size_of::<GLushort>()) as GLsizeiptr,
-            mem::transmute(&indices[0]),
-            gl::STATIC_DRAW
-            );
+            (indices.len() * size_of::<GLushort>()) as GLsizeiptr,
+            transmute(&indices[0]),
+            gl::STATIC_DRAW);
 
-        gl::UseProgram(program);
+        program.activate();
 
         // Specify the layout of the vertex data
         let pos_attr = gl::GetAttribLocation(
-            program,
+            program.name,
             CString::new("position").unwrap().as_ptr()
             ) as GLuint;
         gl::EnableVertexAttribArray(pos_attr);
@@ -66,7 +66,7 @@ pub fn new (vertices: &[Vertex], indices: &[GLushort], program: Shader) -> Mesh 
     Mesh {
         vao,
         elements: indices.len() as GLsizei,
-        program
+        program,
     }
 }
 
@@ -77,7 +77,7 @@ pub trait Renderable {
 impl Renderable for Mesh {
     fn render(&self) {
         unsafe {
-            gl::UseProgram(self.program);
+            self.program.activate();
             gl::BindVertexArray(self.vao);
             gl::DrawElements(
                 gl::TRIANGLES,

@@ -5,9 +5,28 @@ use std::ffi::CString;
 use std::ptr;
 use gl::types::*;
 
-pub type ShaderUnit = GLuint;
+type ShaderUnit = GLuint;
 
-pub fn compile (src: &str, ty: GLenum) -> ShaderUnit {
+fn gl_errors() -> Vec<&'static str> {
+    let mut strings = Vec::new();
+    loop {
+        let error = unsafe { gl::GetError() };
+        if error == gl::NO_ERROR { break; }
+        strings.push(match error {
+            gl::INVALID_ENUM => "GL_INVALID_ENUM",
+            gl::INVALID_VALUE => "GL_INVALID_VALUE",
+            gl::INVALID_OPERATION => "GL_INVALID_OPERATION",
+            gl::INVALID_FRAMEBUFFER_OPERATION => "GL_INVALID_FRAMEBUFFER_OPERATION",
+            gl::OUT_OF_MEMORY => "GL_OUT_OF_MEMORY",
+            gl::STACK_UNDERFLOW => "GL_STACK_UNDERFLOW",
+            gl::STACK_OVERFLOW => "GL_STACK_OVERFLOW",
+            _ => "Oh no, glGetError itself failed!"
+        });
+    }
+    strings
+}
+
+fn compile (src: &str, ty: GLenum) -> ShaderUnit {
     let typestr = match ty {
         gl::FRAGMENT_SHADER => "Fragment",
         gl::GEOMETRY_SHADER => "Geometry",
@@ -53,9 +72,42 @@ pub fn compile (src: &str, ty: GLenum) -> ShaderUnit {
     }
 }
 
-pub type Shader = GLuint;
+pub struct Shader {
+    pub name: GLuint,
+    // locations: Vec<GLint>,
+}
 
-pub fn link (units: &[ShaderUnit]) -> Shader {
+impl Shader {
+    pub fn from_sources (sources: &[(&str, GLenum)]) -> Shader {
+        let mut units = Vec::new();
+        for (source, ty) in sources {
+            units.push(compile(source, *ty));
+        }
+        link(&units)
+    }
+
+    pub fn get_location (&self, name: &str) -> GLint {
+        use std::ffi::CString;
+        let location = {
+            let c_name = CString::new(name).expect("uniform name is not a valid c string");
+            unsafe { gl::GetUniformLocation(self.name, c_name.as_ptr() as * const GLchar) }
+        };
+
+        if location == -1 {
+            panic!("Could not get location of uniform '{}' in program {}{}",
+                   name,
+                   self.name,
+                   [vec![""], gl_errors()].concat().join("\n"));
+        }
+        location
+    }
+
+    pub fn activate (&self) {
+        unsafe { gl::UseProgram(self.name) };
+    }
+}
+
+fn link (units: &[ShaderUnit]) -> Shader {
     unsafe {
         let program = gl::CreateProgram();
         for unit in units.iter() {
@@ -91,6 +143,6 @@ pub fn link (units: &[ShaderUnit]) -> Shader {
         if status != (gl::TRUE as GLint) {
             panic!("Failed to link shader",);
         }
-        program
+        Shader { name: program }
     }
 }
