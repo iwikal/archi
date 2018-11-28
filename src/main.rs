@@ -49,14 +49,13 @@ fn main() {
         for e in event_pump.poll_iter() {
             use sdl2::event::Event;
             match e {
-                Event::Quit {..} => break,
+                Event::Quit {..} => { should_quit = true; },
                 Event::KeyDown {scancode, ..} => {
-                    match scancode {
-                        Some(key) => {
-                            let name = key.name();
-                            if name == "Escape" { should_quit = true; }
-                        },
-                        _ => ()
+                    if let Some(key) = scancode {
+                        match key.name() {
+                            "Escape" => { should_quit = true; },
+                            _ => {}
+                        }
                     }
                 },
                 _ => {}
