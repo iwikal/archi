@@ -33,15 +33,13 @@ fn main() {
         let vertices = [
             Vertex { position: vec3( 0.0,  1.0, 0.0) },
             Vertex { position: vec3( 0.5, -0.5, 0.0) },
-            Vertex { position: vec3(-0.5, -0.5, 0.0) }
+            Vertex { position: vec3(-0.5, -0.5, 0.0) },
         ];
         let indices = [0, 1, 2];
         mesh::new(&vertices, &indices, program)
     };
 
     let mut camera = camera::Camera::new();
-
-    let pv_location = m.program.get_location("projection_view");
 
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut should_quit = false;
@@ -64,21 +62,11 @@ fn main() {
 
         camera.take_input(&event_pump);
 
-        let view = camera.view();
-        let projection = camera.projection();
-        let projection_view = projection * view;
-
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            gl::UniformMatrix4fv(pv_location,
-                                 1,
-                                 gl::FALSE,
-                                 &(projection_view[0][0]));
-        }
+        unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); }
 
         {
             use mesh::Renderable;
-            m.render();
+            m.render(&camera);
         }
 
         window.gl_swap_window();

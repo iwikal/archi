@@ -1,5 +1,3 @@
-extern crate gl;
-
 use std::str;
 use std::ffi::CString;
 use std::ptr;
@@ -104,6 +102,8 @@ impl Shader {
 
     pub fn activate (&self) {
         unsafe { gl::UseProgram(self.name) };
+        let errors = gl_errors();
+        if errors.len() > 0 { println!("GL error: {}", errors.join("\n")); }
     }
 }
 

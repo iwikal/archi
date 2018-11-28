@@ -4,6 +4,7 @@ use std::ptr;
 use std::ffi::CString;
 use gl::types::*;
 use shader::Shader;
+use camera::Camera;
 
 pub struct Vertex {
     pub position: glm::Vec3
@@ -12,7 +13,7 @@ pub struct Vertex {
 pub struct Mesh {
     vao: GLuint,
     elements: GLsizei,
-    pub program: Shader,
+    program: Shader,
 }
 
 pub fn new (vertices: &[Vertex],
@@ -71,13 +72,24 @@ pub fn new (vertices: &[Vertex],
 }
 
 pub trait Renderable {
-    fn render(&self) -> ();
+    fn render(&self, camera: &Camera) -> ();
 }
 
 impl Renderable for Mesh {
-    fn render(&self) {
+    fn render(&self, camera: &Camera) {
+        let view = camera.view();
+        let projection = camera.projection();
+        let projection_view = projection * view;
+
+        let pv_location = self.program.get_location("projection_view");
+
+        self.program.activate();
         unsafe {
-            self.program.activate();
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            gl::UniformMatrix4fv(pv_location,
+                                 1,
+                                 gl::FALSE,
+                                 &(projection_view[0][0]));
             gl::BindVertexArray(self.vao);
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -86,6 +98,7 @@ impl Renderable for Mesh {
                 ptr::null()
                 );
             gl::BindVertexArray(0);
+            gl::UseProgram(0);
         }
     }
 }

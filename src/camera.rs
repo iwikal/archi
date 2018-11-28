@@ -12,7 +12,7 @@ pub struct Camera {
 impl Camera {
     pub fn new () -> Camera {
         Camera {
-            position: glm::vec3(0., 0., 0.),
+            position: glm::vec3(0., 0., -1.),
             pitch: 0.,
             yaw: 0.,
             projection: glm::ext::perspective(1.0, 4.0 / 3.0, 0.1, 100.0),
