@@ -33,36 +33,22 @@ impl Camera {
 
             let mut move_vector = glm::vec3(0., 0., 0.);
 
-            fn is_pressed(keyboard_state: &KeyboardState, name: &str) -> bool {
+            let is_pressed = |name| {
                 let key = Scancode::from_name(name).unwrap();
-                keyboard_state.is_scancode_pressed(key)
-            }
+                state.is_scancode_pressed(key)
+            };
 
-            if is_pressed(&state, "W") {
-                move_vector = move_vector + glm::vec3(0., 0., 1.);
-            }
-            if is_pressed(&state, "A") {
-                move_vector = move_vector + glm::vec3(1., 0., 0.);
-            }
-            if is_pressed(&state, "S") {
-                move_vector = move_vector + glm::vec3(0., 0., -1.);
-            }
-            if is_pressed(&state, "D") {
-                move_vector = move_vector + glm::vec3(-1., 0., 0.);
-            }
+            if is_pressed("W") { move_vector = move_vector + glm::vec3(0., 0., 1.); }
+            if is_pressed("A") { move_vector = move_vector + glm::vec3(1., 0., 0.); }
+            if is_pressed("S") { move_vector = move_vector + glm::vec3(0., 0., -1.); }
+            if is_pressed("D") { move_vector = move_vector + glm::vec3(-1., 0., 0.); }
 
             let move_vector = move_vector * 0.125;
-            
-            let length = glm::length(move_vector);
-            let move_vector = move_vector * glm::max(length, 1.0);
-            let move_vector = glm::vec4(move_vector.x,
-                                        move_vector.y,
-                                        move_vector.z,
-                                        1.0);
+
+            let move_vector = move_vector * glm::max(glm::length(move_vector), 1.0);
+            let move_vector = move_vector.extend(1.0);
             let move_vector = glm::inverse(&self.orientation()) * move_vector;
-            let move_vector = glm::vec3(move_vector.x,
-                                        move_vector.y,
-                                        move_vector.z);
+            let move_vector = move_vector.truncate(3);
             self.position = self.position + move_vector;
         }
     }
