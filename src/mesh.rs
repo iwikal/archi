@@ -70,4 +70,33 @@ impl Mesh {
             gl::BindVertexArray(0);
         }
     }
+
+    pub fn cube () -> Mesh {
+        use glm::vec3;
+        let vertices = [
+            Vertex { position: vec3(-0.5, -0.5, -0.5) },
+            Vertex { position: vec3( 0.5, -0.5, -0.5) },
+            Vertex { position: vec3( 0.5,  0.5, -0.5) },
+            Vertex { position: vec3(-0.5,  0.5, -0.5) },
+            Vertex { position: vec3(-0.5,  0.5,  0.5) },
+            Vertex { position: vec3( 0.5,  0.5,  0.5) },
+            Vertex { position: vec3( 0.5, -0.5,  0.5) },
+            Vertex { position: vec3(-0.5, -0.5,  0.5) },
+        ];
+        let indices = [
+            0, 1, 2,
+            0, 2, 3,
+            0, 3, 4,
+            0, 4, 7,
+            0, 7, 6,
+            0, 6, 1,
+            2, 1, 5,
+            3, 2, 5,
+            4, 3, 5,
+            7, 4, 5,
+            6, 7, 5,
+            1, 6, 5,
+        ];
+        Mesh::new(&vertices, &indices)
+    }
 }

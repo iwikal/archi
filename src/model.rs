@@ -5,11 +5,11 @@ use mesh::Mesh;
 #[derive(Debug)]
 pub struct Model {
     mesh: &'static Mesh,
-    shader: Shader,
+    shader: &'static Shader,
 }
 
 impl Model {
-    pub fn new (mesh: &'static Mesh, shader: Shader) -> Model {
+    pub fn new (mesh: &'static Mesh, shader: &'static Shader) -> Model {
         Model {
             mesh,
             shader,

@@ -25,27 +25,29 @@ fn main() {
     gl::load_with(|s| video_system.gl_get_proc_address(s) as * const _);
 
     let m = {
-       let shader = shader::Shader::from_sources(&[
-           (VS_SRC, gl::VERTEX_SHADER),
-           (FS_SRC, gl::FRAGMENT_SHADER)
-        ]);
+        let shader = {
+            let sources = [
+                (VS_SRC, gl::VERTEX_SHADER),
+                (FS_SRC, gl::FRAGMENT_SHADER)
+            ];
+            let shader = shader::Shader::from_sources(&sources);
+            let shader = Box::new(shader);
+            let shader = Box::leak(shader);
+            shader
+        };
 
         use mesh::*;
         use model::*;
-        use glm::vec3;
-        let vertices = [
-            Vertex { position: vec3( 0.0,  1.0, 0.0) },
-            Vertex { position: vec3( 0.5, -0.5, 0.0) },
-            Vertex { position: vec3(-0.5, -0.5, 0.0) },
-        ];
-        let indices = [0, 1, 2];
-
-        let mesh = Mesh::new(&vertices, &indices);
+        let mesh = Mesh::cube();
         let mesh = Box::new(mesh);
         let mesh = Box::leak(mesh);
         Model::new(mesh, shader)
     };
 
+    unsafe {
+        gl::Enable(gl::CULL_FACE);
+        gl::CullFace(gl::BACK);
+    }
     let mut camera = camera::Camera::new();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
