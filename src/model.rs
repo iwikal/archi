@@ -1,40 +1,41 @@
 use camera::Camera;
 use shader::Shader;
 use mesh::Mesh;
+use glm::Mat4;
 
 #[derive(Debug)]
 pub struct Model {
     mesh: &'static Mesh,
     shader: &'static Shader,
+    pub transform: Mat4,
 }
 
 impl Model {
-    pub fn new (mesh: &'static Mesh, shader: &'static Shader) -> Model {
+    pub fn new (
+        mesh: &'static Mesh,
+        shader: &'static Shader,
+        transform: Mat4,
+        ) -> Model {
         Model {
             mesh,
             shader,
+            transform,
         }
     }
-}
 
-pub trait Renderable {
-    fn render(&self, camera: &Camera) -> ();
-}
-
-impl Renderable for Model {
-    fn render(&self, camera: &Camera) {
+    pub fn render(&self, camera: &Camera) {
         let view = camera.view();
         let projection = camera.projection();
-        let projection_view = projection * view;
+        let mvp_matrix = projection * view * self.transform;
 
-        let pv_location = self.shader.get_location("projection_view");
+        let mvp_location = self.shader.get_location("model_view_projection");
 
         self.shader.activate();
         unsafe {
-            gl::UniformMatrix4fv(pv_location,
+            gl::UniformMatrix4fv(mvp_location,
                                  1,
                                  gl::FALSE,
-                                 &(projection_view[0][0]));
+                                 &(mvp_matrix[0][0]));
             self.mesh.draw();
             gl::UseProgram(0);
         }

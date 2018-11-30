@@ -41,7 +41,7 @@ fn main() {
         let mesh = Mesh::cube();
         let mesh = Box::new(mesh);
         let mesh = Box::leak(mesh);
-        Model::new(mesh, shader)
+        Model::new(mesh, shader, num::one())
     };
 
     unsafe {
@@ -79,10 +79,7 @@ fn main() {
 
         unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); }
 
-        {
-            use model::Renderable;
-            m.render(&camera);
-        }
+        m.render(&camera);
 
         window.gl_swap_window();
         previous_time = now;
