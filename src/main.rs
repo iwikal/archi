@@ -48,11 +48,17 @@ fn main() {
         gl::Enable(gl::CULL_FACE);
         gl::CullFace(gl::BACK);
     }
+
     let mut camera = camera::Camera::new();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut should_quit = false;
+    use std::time::{ Instant };
+    let mut previous_time = Instant::now();
     while !should_quit {
+        let now = Instant::now();
+        let delta_t = now.duration_since(previous_time);
+        let delta_seconds = delta_t.subsec_micros() as f32 / 1000_000.0;
         for e in event_pump.poll_iter() {
             use sdl2::event::Event;
             match e {
@@ -69,7 +75,7 @@ fn main() {
             }
         }
 
-        camera.take_input(&event_pump);
+        camera.take_input(&event_pump, delta_seconds);
 
         unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); }
 
@@ -79,6 +85,7 @@ fn main() {
         }
 
         window.gl_swap_window();
+        previous_time = now;
     }
     println!("Quit");
 }

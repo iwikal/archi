@@ -19,7 +19,7 @@ impl Camera {
         }
     }
 
-    pub fn take_input (&mut self, pump: &sdl2::EventPump) {
+    pub fn take_input (&mut self, pump: &sdl2::EventPump, delta_t: f32) {
         {
             let scale = 5.;
             let state = pump.relative_mouse_state();
@@ -42,13 +42,14 @@ impl Camera {
             if is_pressed("A") { move_vector = move_vector + glm::vec3(1., 0., 0.); }
             if is_pressed("S") { move_vector = move_vector + glm::vec3(0., 0., -1.); }
             if is_pressed("D") { move_vector = move_vector + glm::vec3(-1., 0., 0.); }
+            let move_vector = move_vector / glm::max(glm::length(move_vector), 1.0);
 
-            let move_vector = move_vector * 0.125;
-
-            let move_vector = move_vector * glm::max(glm::length(move_vector), 1.0);
             let move_vector = move_vector.extend(1.0);
             let move_vector = glm::inverse(&self.orientation()) * move_vector;
             let move_vector = move_vector.truncate(3);
+
+            let move_vector = move_vector * (2.0 * delta_t);
+
             self.position = self.position + move_vector;
         }
     }
