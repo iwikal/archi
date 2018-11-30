@@ -10,11 +10,13 @@ static FS_SRC: &'static str = include_str!("shaders/basicShader.frag");
 mod shader;
 mod mesh;
 mod camera;
+mod model;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_system = sdl_context.video().unwrap();
-
+    sdl_context.mouse()
+        .set_relative_mouse_mode(true);
     let window = video_system.window("archi", 800, 600)
         .opengl()
         .build()
@@ -23,12 +25,13 @@ fn main() {
     gl::load_with(|s| video_system.gl_get_proc_address(s) as * const _);
 
     let m = {
-        let program = shader::Shader::from_sources(&[
+       let shader = shader::Shader::from_sources(&[
            (VS_SRC, gl::VERTEX_SHADER),
            (FS_SRC, gl::FRAGMENT_SHADER)
         ]);
 
-        use mesh::Vertex;
+        use mesh::*;
+        use model::*;
         use glm::vec3;
         let vertices = [
             Vertex { position: vec3( 0.0,  1.0, 0.0) },
@@ -36,7 +39,11 @@ fn main() {
             Vertex { position: vec3(-0.5, -0.5, 0.0) },
         ];
         let indices = [0, 1, 2];
-        mesh::new(&vertices, &indices, program)
+
+        let mesh = Mesh::new(&vertices, &indices);
+        let mesh = Box::new(mesh);
+        let mesh = Box::leak(mesh);
+        Model::new(mesh, shader)
     };
 
     let mut camera = camera::Camera::new();
@@ -65,7 +72,7 @@ fn main() {
         unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); }
 
         {
-            use mesh::Renderable;
+            use model::Renderable;
             m.render(&camera);
         }
 

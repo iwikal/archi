@@ -70,6 +70,7 @@ fn compile (src: &str, ty: GLenum) -> ShaderUnit {
     }
 }
 
+#[derive(Debug)]
 pub struct Shader {
     pub name: GLuint,
     // locations: Vec<GLint>,
