@@ -13,16 +13,16 @@ mod camera;
 mod model;
 
 fn main() {
-    let width = 800;
-    let height = 600;
     let sdl_context = sdl2::init().unwrap();
     let video_system = sdl_context.video().unwrap();
     sdl_context.mouse()
         .set_relative_mouse_mode(true);
-    let window = video_system.window("archi", width, height)
+    let window = video_system.window("archi", 800, 600)
+        .fullscreen_desktop()
         .opengl()
         .build()
         .unwrap();
+    let (width, height) = window.size();
     let _gl_context = window.gl_create_context().unwrap();
     gl::load_with(|s| video_system.gl_get_proc_address(s) as * const _);
 
