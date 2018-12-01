@@ -42,6 +42,8 @@ impl Camera {
             if is_pressed("A") { move_vector = move_vector + glm::vec3(1., 0., 0.); }
             if is_pressed("S") { move_vector = move_vector + glm::vec3(0., 0., -1.); }
             if is_pressed("D") { move_vector = move_vector + glm::vec3(-1., 0., 0.); }
+            if is_pressed("Space") { move_vector = move_vector + glm::vec3(0., -1., 0.); }
+            if is_pressed("Left Shift") { move_vector = move_vector + glm::vec3(0., 1., 0.); }
             let move_vector = move_vector / glm::max(glm::length(move_vector), 1.0);
 
             let move_vector = move_vector.extend(1.0);
