@@ -29,6 +29,7 @@ impl Camera {
             )
     }
 
+    #[allow(dead_code)]
     pub fn ortho (width: f32, height: f32, near: f32, far: f32) -> Camera {
         let mut projection: glm::Mat4 = num::one();
         projection[0][0] = 1.0;
