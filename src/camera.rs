@@ -6,25 +6,50 @@ pub struct Camera {
     position: glm::Vec3,
     pitch: f32,
     yaw: f32,
-    projection: glm::Mat4
+    orientation: glm::Mat4,
+    projection: glm::Mat4,
 }
 
+static STARTING_POSITION: glm::Vec3 = glm::Vec3 { x: 0., y: 0., z: 2. };
 impl Camera {
-    pub fn new () -> Camera {
+    fn new (projection: glm::Mat4) -> Camera {
         Camera {
-            position: glm::vec3(0., 0., -1.),
+            position: STARTING_POSITION,
             pitch: 0.,
             yaw: 0.,
-            projection: glm::ext::perspective(1.0, 4.0 / 3.0, 0.1, 100.0),
+            orientation: num::one(),
+            projection,
         }
+    }
+
+    pub fn persp (width: f32, height: f32, near: f32, far: f32) -> Camera {
+        let fov = 1.0; // radians
+        Camera::new(
+            glm::ext::perspective_rh(fov, width / height, near, far)
+            )
+    }
+
+    pub fn ortho (width: f32, height: f32, near: f32, far: f32) -> Camera {
+        let mut projection: glm::Mat4 = num::one();
+        projection[0][0] = 1.0;
+        projection[1][1] = width / height;
+        projection[1][2] = 2.0 / (far - near);
+        projection[3][2] = (far + near) / (far - near);
+        Camera::new(
+            projection
+            )
     }
 
     pub fn take_input (&mut self, pump: &sdl2::EventPump, delta_t: f32) {
         {
-            let scale = 5.;
+            let scale = 1.0 / 128.0;
             let state = pump.relative_mouse_state();
-            self.yaw += (state.x() as f32 / 800.) * scale;
-            self.pitch += (state.y() as f32 / 600.) * scale;
+            self.yaw += (state.x() as f32) * scale;
+            self.pitch += (state.y() as f32) * scale;
+
+            let ori = glm::ext::rotate(&num::one(), self.pitch, glm::vec3(1., 0., 0.));
+            let ori = glm::ext::rotate(&ori, self.yaw, glm::vec3(0., 1., 0.));
+            self.orientation = ori;
         }
         {
             let state = pump.keyboard_state();
@@ -38,16 +63,16 @@ impl Camera {
                 state.is_scancode_pressed(key)
             };
 
-            if is_pressed("W") { move_vector = move_vector + glm::vec3(0., 0., 1.); }
-            if is_pressed("A") { move_vector = move_vector + glm::vec3(1., 0., 0.); }
-            if is_pressed("S") { move_vector = move_vector + glm::vec3(0., 0., -1.); }
-            if is_pressed("D") { move_vector = move_vector + glm::vec3(-1., 0., 0.); }
-            if is_pressed("Space") { move_vector = move_vector + glm::vec3(0., -1., 0.); }
-            if is_pressed("Left Shift") { move_vector = move_vector + glm::vec3(0., 1., 0.); }
+            if is_pressed("W") { move_vector = move_vector + glm::vec3(0., 0., -1.); }
+            if is_pressed("A") { move_vector = move_vector + glm::vec3(-1., 0., 0.); }
+            if is_pressed("S") { move_vector = move_vector + glm::vec3(0., 0., 1.); }
+            if is_pressed("D") { move_vector = move_vector + glm::vec3(1., 0., 0.); }
+            if is_pressed("Space") { move_vector = move_vector + glm::vec3(0., 1., 0.); }
+            if is_pressed("Left Shift") { move_vector = move_vector + glm::vec3(0., -1., 0.); }
             let move_vector = move_vector / glm::max(glm::length(move_vector), 1.0);
 
             let move_vector = move_vector.extend(1.0);
-            let move_vector = glm::inverse(&self.orientation()) * move_vector;
+            let move_vector = glm::inverse(&self.orientation) * move_vector;
             let move_vector = move_vector.truncate(3);
 
             let move_vector = move_vector * (2.0 * delta_t);
@@ -56,18 +81,12 @@ impl Camera {
         }
     }
 
-    fn orientation (&self) -> glm::Mat4 {
-        let ori = glm::ext::rotate(&num::one(), self.pitch, glm::vec3(1., 0., 0.));
-        let ori = glm::ext::rotate(&ori, self.yaw, glm::vec3(0., 1., 0.));
-        ori
-    }
-
     pub fn projection (&self) -> glm::Mat4 { self.projection }
 
     pub fn view (&self) -> glm::Mat4 {
         let view: glm::Mat4 = num::one();
-        let view = view * self.orientation();
-        let view = glm::ext::translate(&view, self.position);
+        let view = view * self.orientation;
+        let view = glm::ext::translate(&view, -self.position);
 
         view
     }

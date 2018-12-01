@@ -13,11 +13,13 @@ mod camera;
 mod model;
 
 fn main() {
+    let width = 800;
+    let height = 600;
     let sdl_context = sdl2::init().unwrap();
     let video_system = sdl_context.video().unwrap();
     sdl_context.mouse()
         .set_relative_mouse_mode(true);
-    let window = video_system.window("archi", 800, 600)
+    let window = video_system.window("archi", width, height)
         .opengl()
         .build()
         .unwrap();
@@ -49,7 +51,7 @@ fn main() {
         gl::CullFace(gl::BACK);
     }
 
-    let mut camera = camera::Camera::new();
+    let mut camera = camera::Camera::persp(width as f32, height as f32, 0.1, 100.0);
 
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut should_quit = false;
