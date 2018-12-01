@@ -48,7 +48,9 @@ fn main() {
 
     unsafe {
         gl::Enable(gl::CULL_FACE);
-        gl::CullFace(gl::BACK);
+        gl::CullFace(gl::FRONT);
+
+        gl::Enable(gl::DEPTH_TEST);
     }
 
     let mut camera = camera::Camera::persp(width as f32, height as f32, 0.1, 100.0);

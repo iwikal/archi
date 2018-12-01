@@ -4,13 +4,23 @@ use std::ptr;
 use gl::types::*;
 
 pub struct Vertex {
-    pub position: glm::Vec3
+    pub position: glm::Vec3,
+    pub color: glm::Vec3,
 }
 
 #[derive(Debug)]
 pub struct Mesh {
     vao: GLuint,
     elements: GLsizei,
+}
+
+static POSITION_LOCATION: GLuint = 0;
+static COLOR_LOCATION: GLuint = 1;
+
+macro_rules! offset_of {
+    ($ty:ty, $field:ident) => {
+        &(*(0 as *const $ty)).$field as *const _ as usize
+    }
 }
 
 impl Mesh {
@@ -39,15 +49,23 @@ impl Mesh {
                 transmute(&indices[0]),
                 gl::STATIC_DRAW);
 
-            gl::EnableVertexAttribArray(0);
+            gl::EnableVertexAttribArray(POSITION_LOCATION);
             gl::VertexAttribPointer(
-                0,
+                POSITION_LOCATION,
                 3,
                 gl::FLOAT,
                 gl::FALSE as GLboolean,
-                0,
-                ptr::null(),
-                );
+                size_of::<Vertex>() as GLsizei,
+                offset_of!(Vertex, position) as *const _);
+
+            gl::EnableVertexAttribArray(COLOR_LOCATION);
+            gl::VertexAttribPointer(
+                COLOR_LOCATION,
+                3,
+                gl::FLOAT,
+                gl::FALSE as GLboolean,
+                size_of::<Vertex>() as GLsizei,
+                offset_of!(Vertex, color) as *const _);
 
             gl::BindVertexArray(0);
         }
@@ -74,14 +92,14 @@ impl Mesh {
     pub fn cube () -> Mesh {
         use glm::vec3;
         let vertices = [
-            Vertex { position: vec3(-0.5, -0.5, -0.5) },
-            Vertex { position: vec3( 0.5, -0.5, -0.5) },
-            Vertex { position: vec3( 0.5,  0.5, -0.5) },
-            Vertex { position: vec3(-0.5,  0.5, -0.5) },
-            Vertex { position: vec3(-0.5,  0.5,  0.5) },
-            Vertex { position: vec3( 0.5,  0.5,  0.5) },
-            Vertex { position: vec3( 0.5, -0.5,  0.5) },
-            Vertex { position: vec3(-0.5, -0.5,  0.5) },
+            Vertex { position: vec3(-0.5, -0.5, -0.5), color: vec3(0., 0., 0.) },
+            Vertex { position: vec3( 0.5, -0.5, -0.5), color: vec3(1., 0., 0.) },
+            Vertex { position: vec3( 0.5,  0.5, -0.5), color: vec3(1., 1., 0.) },
+            Vertex { position: vec3(-0.5,  0.5, -0.5), color: vec3(0., 1., 0.) },
+            Vertex { position: vec3(-0.5,  0.5,  0.5), color: vec3(0., 1., 1.) },
+            Vertex { position: vec3( 0.5,  0.5,  0.5), color: vec3(1., 1., 1.) },
+            Vertex { position: vec3( 0.5, -0.5,  0.5), color: vec3(1., 0., 1.) },
+            Vertex { position: vec3(-0.5, -0.5,  0.5), color: vec3(0., 0., 1.) },
         ];
         let indices = [
             0, 1, 2,
