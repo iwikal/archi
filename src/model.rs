@@ -3,7 +3,7 @@ use shader::Shader;
 use mesh::Mesh;
 use glm::Mat4;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Model {
     mesh: &'static Mesh,
     shader: &'static Shader,

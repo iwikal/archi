@@ -2,6 +2,7 @@ extern crate sdl2;
 extern crate gl;
 extern crate num;
 extern crate glm;
+extern crate rand;
 
 // Shader sources
 static VS_SRC: &'static str = include_str!("shaders/basicShader.vert");
@@ -26,7 +27,7 @@ fn main() {
     let _gl_context = window.gl_create_context().unwrap();
     gl::load_with(|s| video_system.gl_get_proc_address(s) as * const _);
 
-    let m = {
+    let models = {
         let shader = {
             let sources = [
                 (VS_SRC, gl::VERTEX_SHADER),
@@ -43,7 +44,20 @@ fn main() {
         let mesh = Mesh::cube();
         let mesh = Box::new(mesh);
         let mesh = Box::leak(mesh);
-        Model::new(mesh, shader, num::one())
+
+        let mut models = [Model::new(mesh, shader, num::one()); 100];
+        let mut rng = rand::prelude::thread_rng();
+        for m in &mut models[1..] {
+            use glm::{ vec3, ext::{ translate, rotate } };
+            use rand::Rng;
+            let pos = vec3(
+                rng.gen_range(-5.0, 5.0),
+                rng.gen_range(-5.0, 5.0),
+                rng.gen_range(-5.0, 5.0));
+            let mat = translate(&num::one(), pos);
+            m.transform = rotate(&mat, rng.gen_range(0., 6.28), vec3(0., 1., 0.));
+        }
+        models
     };
 
     unsafe {
@@ -83,7 +97,9 @@ fn main() {
 
         unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); }
 
-        m.render(&camera);
+        for m in models.iter() {
+            m.render(&camera);
+        }
 
         window.gl_swap_window();
         previous_time = now;

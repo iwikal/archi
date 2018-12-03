@@ -3,8 +3,10 @@ extern crate glm;
 use std::ptr;
 use gl::types::*;
 
+#[derive(Debug)]
 pub struct Vertex {
     pub position: glm::Vec3,
+    pub normal: glm::Vec3,
     pub color: glm::Vec3,
 }
 
@@ -15,7 +17,8 @@ pub struct Mesh {
 }
 
 static POSITION_LOCATION: GLuint = 0;
-static COLOR_LOCATION: GLuint = 1;
+static NORMAL_LOCATION: GLuint = 1;
+static COLOR_LOCATION: GLuint = 2;
 
 macro_rules! offset_of {
     ($ty:ty, $field:ident) => {
@@ -58,6 +61,15 @@ impl Mesh {
                 size_of::<Vertex>() as GLsizei,
                 offset_of!(Vertex, position) as *const _);
 
+            gl::EnableVertexAttribArray(NORMAL_LOCATION);
+            gl::VertexAttribPointer(
+                NORMAL_LOCATION,
+                3,
+                gl::FLOAT,
+                gl::FALSE as GLboolean,
+                size_of::<Vertex>() as GLsizei,
+                offset_of!(Vertex, normal) as *const _);
+
             gl::EnableVertexAttribArray(COLOR_LOCATION);
             gl::VertexAttribPointer(
                 COLOR_LOCATION,
@@ -91,30 +103,36 @@ impl Mesh {
 
     pub fn cube () -> Mesh {
         use glm::vec3;
-        let vertices = [
-            Vertex { position: vec3(-0.5, -0.5, -0.5), color: vec3(0., 0., 0.) },
-            Vertex { position: vec3( 0.5, -0.5, -0.5), color: vec3(1., 0., 0.) },
-            Vertex { position: vec3( 0.5,  0.5, -0.5), color: vec3(1., 1., 0.) },
-            Vertex { position: vec3(-0.5,  0.5, -0.5), color: vec3(0., 1., 0.) },
-            Vertex { position: vec3(-0.5,  0.5,  0.5), color: vec3(0., 1., 1.) },
-            Vertex { position: vec3( 0.5,  0.5,  0.5), color: vec3(1., 1., 1.) },
-            Vertex { position: vec3( 0.5, -0.5,  0.5), color: vec3(1., 0., 1.) },
-            Vertex { position: vec3(-0.5, -0.5,  0.5), color: vec3(0., 0., 1.) },
-        ];
-        let indices = [
-            0, 1, 2,
-            0, 2, 3,
-            0, 3, 4,
-            0, 4, 7,
-            0, 7, 6,
-            0, 6, 1,
-            2, 1, 5,
-            3, 2, 5,
-            4, 3, 5,
-            7, 4, 5,
-            6, 7, 5,
-            1, 6, 5,
-        ];
-        Mesh::new(&vertices, &indices)
+        let vector = |arr: &[i32]| vec3(arr[0] as f32, arr[1] as f32, arr[2] as f32);
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        for plane in 0..3 {
+            for direction in &[-1, 1] {
+                let normal = {
+                    let mut arr = [0; 3];
+                    arr[plane] = *direction;
+                    vector(&arr)
+                };
+                let color = if direction > &0 { normal } else { normal + 1.0 };
+                let l = vertices.len() as GLushort;
+                for a in &[[0, 0], [0, 1], [1, 1], [1, 0]] {
+                    let position = {
+                        let mut slice = [(direction + 1) / 2, a[0], a[1]];
+                        slice.rotate_right(plane);
+                        vector(&slice) - 0.5
+                    };
+                    vertices.push(Vertex { position, normal, color });
+                };
+                indices.extend(&{
+                    let mut new = [
+                        l + 0, l + 1, l + 2,
+                        l + 2, l + 3, l + 0,
+                    ];
+                    if direction < &0 { new.reverse(); }
+                    new
+                });
+            };
+        };
+        Mesh::new(&vertices, indices.as_slice())
     }
 }
