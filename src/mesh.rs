@@ -106,32 +106,41 @@ impl Mesh {
         let vector = |arr: &[i32]| vec3(arr[0] as f32, arr[1] as f32, arr[2] as f32);
         let mut vertices = Vec::new();
         let mut indices = Vec::new();
-        for plane in 0..3 {
-            for direction in &[-1, 1] {
-                let normal = {
-                    let mut arr = [0; 3];
-                    arr[plane] = *direction;
-                    vector(&arr)
-                };
-                let color = if direction > &0 { normal } else { normal + 1.0 };
-                let l = vertices.len() as GLushort;
-                for a in &[[0, 0], [0, 1], [1, 1], [1, 0]] {
-                    let position = {
-                        let mut slice = [(direction + 1) / 2, a[0], a[1]];
-                        slice.rotate_right(plane);
-                        vector(&slice) - 0.5
-                    };
-                    vertices.push(Vertex { position, normal, color });
-                };
-                indices.extend(&{
-                    let mut new = [
-                        l + 0, l + 1, l + 2,
-                        l + 2, l + 3, l + 0,
-                    ];
-                    if direction < &0 { new.reverse(); }
-                    new
-                });
+        for face in 0..6 {
+            let direction = if face < 3 { -1 } else { 1 };
+            let plane = face % 3;
+            let normal = {
+                let mut arr = [0; 3];
+                arr[plane] = direction;
+                vector(&arr)
             };
+            let color = if direction > 0 { normal } else { normal + 1.0 };
+            vertices.extend(
+                [
+                [0, 0],
+                [0, 1],
+                [1, 1],
+                [1, 0],
+                ].iter()
+                .map(|[a, b]| {
+                    let position = {
+                        let mut corner = [(direction + 1) / 2, *a, *b];
+                        corner.rotate_right(plane);
+                        vector(&corner) - 0.5
+                    };
+                    Vertex { position, normal, color }
+                })
+                );
+            indices.extend(
+                {
+                    let mut new = [
+                        0, 1, 2,
+                        2, 3, 0,
+                    ];
+                    if direction < 0 { new.reverse(); }
+                    new
+                }.iter().map(|i| face as GLushort * 4 + i)
+                );
         };
         Mesh::new(&vertices, indices.as_slice())
     }
