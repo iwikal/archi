@@ -9,6 +9,10 @@ extern crate tobj;
 static VS_SRC: &'static str = include_str!("shaders/basicShader.vert");
 static FS_SRC: &'static str = include_str!("shaders/basicShader.frag");
 
+// Shader sources
+static BUF_VIS_VS_SRC: &'static str = include_str!("shaders/bufVis.vert");
+static BUF_VIS_FS_SRC: &'static str = include_str!("shaders/bufVis.frag");
+
 mod shader;
 mod mesh;
 mod camera;
@@ -32,21 +36,124 @@ fn main() {
     let shader = {
         let sources = [
             (VS_SRC, gl::VERTEX_SHADER),
-            (FS_SRC, gl::FRAGMENT_SHADER)
+            (FS_SRC, gl::FRAGMENT_SHADER),
         ];
         let shader = shader::Shader::from_sources(&sources);
-        let shader = Box::new(shader);
-        let shader = Box::leak(shader);
         shader
+    };
+
+    let buffer_vis_shader = {
+        let sources = [
+            (BUF_VIS_VS_SRC, gl::VERTEX_SHADER),
+            (BUF_VIS_FS_SRC, gl::FRAGMENT_SHADER)
+        ];
+        let shader = shader::Shader::from_sources(&sources);
+        shader
+    };
+
+    #[allow(unused_variables)]
+    let (fbo, color_buffer, depth_buffer) = {
+        use gl::types::*;
+        use std::ptr;
+        let mut fbo = 0;
+        let mut color_buffer = 0;
+        let mut depth_buffer = 0;
+        unsafe {
+            let width = width as i32;
+            let height = height as i32;
+
+            gl::GenFramebuffers(1, &mut fbo);
+            gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
+
+            gl::GenTextures(1, &mut color_buffer);
+            gl::BindTexture(gl::TEXTURE_2D, color_buffer);
+            gl::TexImage2D(gl::TEXTURE_2D,
+                           0,
+                           gl::RGB as GLint,
+                           width,
+                           height,
+                           0,
+                           gl::RGB,
+                           gl::UNSIGNED_BYTE,
+                           ptr::null());
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+
+            gl::NamedFramebufferTexture(fbo,
+                                        gl::COLOR_ATTACHMENT0,
+                                        color_buffer,
+                                        0);
+
+            gl::GenTextures(1, &mut depth_buffer);
+            gl::BindTexture(gl::TEXTURE_2D, depth_buffer);
+            gl::TexImage2D(gl::TEXTURE_2D,
+                           0,
+                           gl::DEPTH_COMPONENT as i32,
+                           width,
+                           height,
+                           0,
+                           gl::DEPTH_COMPONENT,
+                           gl::UNSIGNED_BYTE,
+                           ptr::null());
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as GLint);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
+
+            gl::NamedFramebufferTexture(fbo,
+                                        gl::DEPTH_ATTACHMENT,
+                                        depth_buffer,
+                                        0);
+
+            assert_no_gl_error!();
+            if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
+                panic!("framebuffer not complete");
+            }
+            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+        }
+        (fbo, color_buffer, depth_buffer)
+    };
+
+    let quad_vao = {
+        use gl::types::*;
+
+        let vertices = [
+            glm::vec2(-1., -1.),
+            glm::vec2( 1., -1.),
+            glm::vec2( 1.,  1.),
+            glm::vec2( 1.,  1.),
+            glm::vec2(-1.,  1.),
+            glm::vec2(-1., -1.),
+        ];
+
+        let mut vao = 0;
+        let mut vbo = 0;
+        unsafe {
+            use std::mem::{ size_of, transmute };
+            gl::CreateVertexArrays(1, &mut vao);
+            gl::BindVertexArray(vao);
+            gl::CreateBuffers(1, &mut vbo);
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (vertices.len() * size_of::<glm::Vec2>()) as GLsizeiptr,
+                transmute(&vertices[0]),
+                gl::STATIC_DRAW);
+            gl::EnableVertexAttribArray(0);
+            gl::VertexAttribPointer(0,
+                                    2,
+                                    gl::FLOAT,
+                                    gl::FALSE as GLboolean,
+                                    size_of::<glm::Vec2>() as GLsizei,
+                                    std::ptr::null());
+            gl::BindVertexArray(0);
+        };
+        vao
     };
 
     let models = {
         use model::*;
-        let meshes = model::from_obj(
-            "../../assets/models/spaceship/transport_shuttle.obj",
-            0.1,
-            true,
-            );
+        let meshes = model::from_obj("../../assets/models/spaceship/transport_shuttle.obj",
+                                     0.1,
+                                     true);
         meshes.into_iter()
             .map(|mesh| {
                 let mesh = Box::new(mesh);
@@ -59,8 +166,6 @@ fn main() {
     unsafe {
         gl::Enable(gl::CULL_FACE);
         gl::CullFace(gl::BACK);
-
-        gl::Enable(gl::DEPTH_TEST);
     }
 
     let mut camera = camera::Camera::persp(width as f32, height as f32, 0.1, 100.0);
@@ -91,13 +196,32 @@ fn main() {
 
         camera.take_input(&event_pump, delta_seconds);
 
-        unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); }
+        unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
+            gl::Enable(gl::DEPTH_TEST);
 
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        };
         shader.activate();
         for m in models.iter() {
             m.render(&camera);
         }
-        unsafe { gl::UseProgram(0); }
+
+        unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+            gl::Disable(gl::DEPTH_TEST);
+
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+
+        buffer_vis_shader.activate();
+
+        unsafe {
+            gl::BindVertexArray(quad_vao);
+            gl::BindTextures(0, 2, &[color_buffer, depth_buffer][0]);
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+        }
 
         window.gl_swap_window();
         previous_time = now;
