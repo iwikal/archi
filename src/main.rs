@@ -28,18 +28,18 @@ fn main() {
     let _gl_context = window.gl_create_context().unwrap();
     gl::load_with(|s| video_system.gl_get_proc_address(s) as * const _);
 
-    let models = {
-        let shader = {
-            let sources = [
-                (VS_SRC, gl::VERTEX_SHADER),
-                (FS_SRC, gl::FRAGMENT_SHADER)
-            ];
-            let shader = shader::Shader::from_sources(&sources);
-            let shader = Box::new(shader);
-            let shader = Box::leak(shader);
-            shader
-        };
+    let shader = {
+        let sources = [
+            (VS_SRC, gl::VERTEX_SHADER),
+            (FS_SRC, gl::FRAGMENT_SHADER)
+        ];
+        let shader = shader::Shader::from_sources(&sources);
+        let shader = Box::new(shader);
+        let shader = Box::leak(shader);
+        shader
+    };
 
+    let models = {
         use model::*;
         let meshes = model::from_obj(
             "../../assets/models/spaceship/transport_shuttle.obj",
@@ -92,9 +92,11 @@ fn main() {
 
         unsafe { gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT); }
 
+        shader.activate();
         for m in models.iter() {
             m.render(&camera);
         }
+        unsafe { gl::UseProgram(0); }
 
         window.gl_swap_window();
         previous_time = now;

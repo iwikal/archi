@@ -1,5 +1,4 @@
 use camera::Camera;
-use shader::Shader;
 use mesh::{ Vertex, Mesh };
 use glm::Mat4;
 use std::path::Path;
@@ -8,7 +7,6 @@ use gl::types::*;
 #[derive(Debug, Copy, Clone)]
 pub struct Model {
     mesh: &'static Mesh,
-    shader: &'static Shader,
     pub transform: Mat4,
 }
 
@@ -18,12 +16,10 @@ static MODEL_LOCATION: GLint = 4;
 impl Model {
     pub fn new (
         mesh: &'static Mesh,
-        shader: &'static Shader,
         transform: Mat4,
         ) -> Model {
         Model {
             mesh,
-            shader,
             transform,
         }
     }
@@ -33,7 +29,6 @@ impl Model {
         let projection = camera.projection();
         let mvp_matrix = projection * view * self.transform;
 
-        self.shader.activate();
         unsafe {
             gl::UniformMatrix4fv(MVP_LOCATION,
                                  1,
@@ -44,7 +39,6 @@ impl Model {
                                  gl::FALSE,
                                  &(self.transform[0][0]));
             self.mesh.draw();
-            gl::UseProgram(0);
         }
     }
 }
