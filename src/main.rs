@@ -3,6 +3,7 @@ extern crate gl;
 extern crate num;
 extern crate glm;
 extern crate rand;
+extern crate tobj;
 
 // Shader sources
 static VS_SRC: &'static str = include_str!("shaders/basicShader.vert");
@@ -39,30 +40,24 @@ fn main() {
             shader
         };
 
-        use mesh::*;
         use model::*;
-        let mesh = Mesh::cube();
-        let mesh = Box::new(mesh);
-        let mesh = Box::leak(mesh);
-
-        let mut models = [Model::new(mesh, shader, num::one()); 100];
-        let mut rng = rand::prelude::thread_rng();
-        for m in &mut models[1..] {
-            use glm::{ vec3, ext::{ translate, rotate } };
-            use rand::Rng;
-            let pos = vec3(
-                rng.gen_range(-5.0, 5.0),
-                rng.gen_range(-5.0, 5.0),
-                rng.gen_range(-5.0, 5.0));
-            let mat = translate(&num::one(), pos);
-            m.transform = rotate(&mat, rng.gen_range(0., 6.28), vec3(0., 1., 0.));
-        }
-        models
+        let meshes = model::from_obj(
+            "../../assets/models/spaceship/transport_shuttle.obj",
+            0.1,
+            true,
+            );
+        meshes.into_iter()
+            .map(|mesh| {
+                let mesh = Box::new(mesh);
+                let mesh = Box::leak(mesh);
+                Model::new(mesh, num::one())
+            })
+            .collect::<Vec<Model>>()
     };
 
     unsafe {
         gl::Enable(gl::CULL_FACE);
-        gl::CullFace(gl::FRONT);
+        gl::CullFace(gl::BACK);
 
         gl::Enable(gl::DEPTH_TEST);
     }

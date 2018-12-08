@@ -70,13 +70,22 @@ impl Camera {
             if is_pressed("D") { move_vector = move_vector + glm::vec3(1., 0., 0.); }
             if is_pressed("Space") { move_vector = move_vector + glm::vec3(0., 1., 0.); }
             if is_pressed("Left Shift") { move_vector = move_vector + glm::vec3(0., -1., 0.); }
-            let move_vector = move_vector / glm::max(glm::length(move_vector), 1.0);
+            move_vector = move_vector / glm::max(glm::length(move_vector), 1.0);
 
-            let move_vector = move_vector.extend(1.0);
-            let move_vector = glm::inverse(&self.orientation) * move_vector;
-            let move_vector = move_vector.truncate(3);
+            move_vector = {
+                use glm::builtin::{ sin, cos };
+                let x = move_vector.x;
+                let y = move_vector.y;
+                let z = move_vector.z;
+                let sin = sin(self.yaw);
+                let cos = cos(self.yaw);
+                glm::vec3(
+                    x * cos + z * -sin,
+                    y,
+                    z * cos + x * sin)
+            };
 
-            let move_vector = move_vector * (2.0 * delta_t);
+            move_vector = move_vector * (2.0 * delta_t);
 
             self.position = self.position + move_vector;
         }

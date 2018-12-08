@@ -27,7 +27,7 @@ macro_rules! offset_of {
 }
 
 impl Mesh {
-    pub fn new (vertices: &[Vertex], indices: &[GLushort]) -> Mesh {
+    pub fn new (vertices: &[Vertex], indices: &[GLuint]) -> Mesh {
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
@@ -48,7 +48,7 @@ impl Mesh {
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
-                (indices.len() * size_of::<GLushort>()) as GLsizeiptr,
+                (indices.len() * size_of::<GLuint>()) as GLsizeiptr,
                 transmute(&indices[0]),
                 gl::STATIC_DRAW);
 
@@ -94,7 +94,7 @@ impl Mesh {
             gl::DrawElements(
                 gl::TRIANGLES,
                 self.elements,
-                gl::UNSIGNED_SHORT,
+                gl::UNSIGNED_INT,
                 ptr::null()
                 );
             gl::BindVertexArray(0);
@@ -139,7 +139,7 @@ impl Mesh {
                     ];
                     if direction < 0 { new.reverse(); }
                     new
-                }.iter().map(|i| face as GLushort * 4 + i)
+                }.iter().map(|i| face as GLuint * 4 + i)
                 );
         };
         Mesh::new(&vertices, indices.as_slice())
