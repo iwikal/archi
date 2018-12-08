@@ -13,6 +13,7 @@ mod shader;
 mod mesh;
 mod camera;
 mod model;
+mod glerror;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();

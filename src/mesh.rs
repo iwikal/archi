@@ -101,6 +101,7 @@ impl Mesh {
         }
     }
 
+    #[allow(dead_code)]
     pub fn cube () -> Mesh {
         use glm::vec3;
         let vector = |arr: &[i32]| vec3(arr[0] as f32, arr[1] as f32, arr[2] as f32);

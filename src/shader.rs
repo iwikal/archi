@@ -2,27 +2,9 @@ use std::str;
 use std::ffi::CString;
 use std::ptr;
 use gl::types::*;
+use glerror::*;
 
 type ShaderUnit = GLuint;
-
-fn gl_errors() -> Vec<&'static str> {
-    let mut strings = Vec::new();
-    loop {
-        let error = unsafe { gl::GetError() };
-        if error == gl::NO_ERROR { break; }
-        strings.push(match error {
-            gl::INVALID_ENUM => "GL_INVALID_ENUM",
-            gl::INVALID_VALUE => "GL_INVALID_VALUE",
-            gl::INVALID_OPERATION => "GL_INVALID_OPERATION",
-            gl::INVALID_FRAMEBUFFER_OPERATION => "GL_INVALID_FRAMEBUFFER_OPERATION",
-            gl::OUT_OF_MEMORY => "GL_OUT_OF_MEMORY",
-            gl::STACK_UNDERFLOW => "GL_STACK_UNDERFLOW",
-            gl::STACK_OVERFLOW => "GL_STACK_OVERFLOW",
-            _ => "Oh no, glGetError itself failed!"
-        });
-    }
-    strings
-}
 
 fn compile (src: &str, ty: GLenum) -> ShaderUnit {
     let typestr = match ty {
@@ -85,6 +67,7 @@ impl Shader {
         link(&units)
     }
 
+    #[allow(dead_code)]
     pub fn get_location (&self, name: &str) -> GLint {
         use std::ffi::CString;
         let location = {
@@ -93,18 +76,18 @@ impl Shader {
         };
 
         if location == -1 {
-            panic!("Could not get location of uniform '{}' in program {}{}",
+            print_gl_errors();
+            panic!("Could not get location of uniform '{}' in program {}",
                    name,
                    self.name,
-                   [vec![""], gl_errors()].concat().join("\n"));
+                   );
         }
         location
     }
 
     pub fn activate (&self) {
         unsafe { gl::UseProgram(self.name) };
-        let errors = gl_errors();
-        if errors.len() > 0 { println!("GL error: {}", errors.join("\n")); }
+        print_gl_errors();
     }
 }
 
