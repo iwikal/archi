@@ -13,6 +13,9 @@ static FS_SRC: &'static str = include_str!("shaders/basicShader.frag");
 static BUF_VIS_VS_SRC: &'static str = include_str!("shaders/bufVis.vert");
 static BUF_VIS_FS_SRC: &'static str = include_str!("shaders/bufVis.frag");
 
+static AMBIENT_VERT: &'static str = include_str!("shaders/ambient.light.vert");
+static AMBIENT_FRAG: &'static str = include_str!("shaders/ambient.light.frag");
+
 mod shader;
 mod mesh;
 mod camera;
@@ -42,6 +45,22 @@ fn main() {
         shader
     };
 
+    let ambient_shader = {
+        let sources = [
+            (AMBIENT_VERT, gl::VERTEX_SHADER),
+            (AMBIENT_FRAG, gl::FRAGMENT_SHADER),
+        ];
+        let shader = shader::Shader::from_sources(&sources);
+        shader
+    };
+
+    let ambient_mesh = {
+        mesh::Mesh::ambient_light()
+    };
+
+    let ambient_color = glm::vec3(0.1, 0.1, 0.1);
+
+    #[allow(unused_variables)]
     let buffer_vis_shader = {
         let sources = [
             (BUF_VIS_VS_SRC, gl::VERTEX_SHADER),
@@ -112,42 +131,6 @@ fn main() {
         (fbo, color_buffer, depth_buffer)
     };
 
-    let quad_vao = {
-        use gl::types::*;
-
-        let vertices = [
-            glm::vec2(-1., -1.),
-            glm::vec2( 1., -1.),
-            glm::vec2( 1.,  1.),
-            glm::vec2( 1.,  1.),
-            glm::vec2(-1.,  1.),
-            glm::vec2(-1., -1.),
-        ];
-
-        let mut vao = 0;
-        let mut vbo = 0;
-        unsafe {
-            use std::mem::{ size_of, transmute };
-            gl::CreateVertexArrays(1, &mut vao);
-            gl::BindVertexArray(vao);
-            gl::CreateBuffers(1, &mut vbo);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (vertices.len() * size_of::<glm::Vec2>()) as GLsizeiptr,
-                transmute(&vertices[0]),
-                gl::STATIC_DRAW);
-            gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(0,
-                                    2,
-                                    gl::FLOAT,
-                                    gl::FALSE as GLboolean,
-                                    size_of::<glm::Vec2>() as GLsizei,
-                                    std::ptr::null());
-            gl::BindVertexArray(0);
-        };
-        vao
-    };
 
     let models = {
         use model::*;
@@ -212,16 +195,17 @@ fn main() {
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             gl::Disable(gl::DEPTH_TEST);
 
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            gl::BindTexture(gl::TEXTURE_2D, color_buffer);
         }
 
-        buffer_vis_shader.activate();
-
+        ambient_shader.activate();
         unsafe {
-            gl::BindVertexArray(quad_vao);
-            gl::BindTextures(0, 2, &[color_buffer, depth_buffer][0]);
-            gl::DrawArrays(gl::TRIANGLES, 0, 6);
+            gl::Uniform3fv(1, 1, &ambient_color[0]);
         }
+        ambient_mesh.draw();
+        }
+        assert_no_gl_error!();
 
         window.gl_swap_window();
         previous_time = now;

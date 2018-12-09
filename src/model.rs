@@ -1,5 +1,5 @@
 use camera::Camera;
-use mesh::{ Vertex, Mesh };
+use mesh::{ ModelVertex, Mesh };
 use glm::Mat4;
 use std::path::Path;
 use gl::types::*;
@@ -67,8 +67,8 @@ pub fn from_obj (
                         glm::vec3(chunk[2], chunk[1], chunk[0])
                     }
                 });
-            let vertices: Vec<Vertex> = positions.zip(normals)
-                .map(|(position, normal)| Vertex {
+            let vertices: Vec<ModelVertex> = positions.zip(normals)
+                .map(|(position, normal)| ModelVertex {
                     position: position * scale,
                     normal,
                     color: glm::vec3(1.0, 1.0, 1.0),

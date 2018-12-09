@@ -3,11 +3,53 @@ extern crate glm;
 use std::ptr;
 use gl::types::*;
 
+macro_rules! offset_of {
+    ($ty:ty, $field:ident) => {
+        &(*(0 as *const $ty)).$field as *const _ as usize
+    }
+}
+
+pub trait Vertex {
+    unsafe fn init_attrib_pointers ();
+}
+
 #[derive(Debug)]
-pub struct Vertex {
+pub struct ModelVertex {
     pub position: glm::Vec3,
     pub normal: glm::Vec3,
     pub color: glm::Vec3,
+}
+
+impl Vertex for ModelVertex {
+    unsafe fn init_attrib_pointers () {
+        use std::mem::{ size_of };
+        gl::EnableVertexAttribArray(POSITION_LOCATION);
+        gl::VertexAttribPointer(
+            POSITION_LOCATION,
+            3,
+            gl::FLOAT,
+            gl::FALSE as GLboolean,
+            size_of::<Self>() as GLsizei,
+            offset_of!(Self, position) as *const _);
+
+        gl::EnableVertexAttribArray(NORMAL_LOCATION);
+        gl::VertexAttribPointer(
+            NORMAL_LOCATION,
+            3,
+            gl::FLOAT,
+            gl::FALSE as GLboolean,
+            size_of::<Self>() as GLsizei,
+            offset_of!(Self, normal) as *const _);
+
+        gl::EnableVertexAttribArray(COLOR_LOCATION);
+        gl::VertexAttribPointer(
+            COLOR_LOCATION,
+            3,
+            gl::FLOAT,
+            gl::FALSE as GLboolean,
+            size_of::<Self>() as GLsizei,
+            offset_of!(Self, color) as *const _);
+    }
 }
 
 #[derive(Debug)]
@@ -20,14 +62,41 @@ static POSITION_LOCATION: GLuint = 0;
 static NORMAL_LOCATION: GLuint = 1;
 static COLOR_LOCATION: GLuint = 2;
 
-macro_rules! offset_of {
-    ($ty:ty, $field:ident) => {
-        &(*(0 as *const $ty)).$field as *const _ as usize
+struct LightVertex {
+    position: glm::Vec3,
+}
+
+impl Vertex for LightVertex {
+    unsafe fn init_attrib_pointers () {
+        use std::mem::{ size_of };
+        gl::EnableVertexAttribArray(POSITION_LOCATION);
+        gl::VertexAttribPointer(
+            POSITION_LOCATION,
+            3,
+            gl::FLOAT,
+            gl::FALSE as GLboolean,
+            size_of::<Self>() as GLsizei,
+            offset_of!(Self, position) as *const _);
     }
 }
 
 impl Mesh {
-    pub fn new (vertices: &[Vertex], indices: &[GLuint]) -> Mesh {
+    pub fn ambient_light () -> Mesh {
+        let (positions, indices) = Mesh::quad();
+
+        let vertices: Vec<LightVertex> = positions.into_iter()
+            .map(|position| {
+                LightVertex {
+                    position,
+                }
+            }).collect();
+
+        Mesh::new(&vertices, &indices)
+    }
+
+    pub fn new<T> (vertices: &[T], indices: &[GLuint]) -> Mesh
+        where T: Vertex
+    {
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
@@ -40,7 +109,7 @@ impl Mesh {
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (vertices.len() * size_of::<Vertex>()) as GLsizeiptr,
+                (vertices.len() * size_of::<T>()) as GLsizeiptr,
                 transmute(&vertices[0]),
                 gl::STATIC_DRAW);
 
@@ -52,33 +121,7 @@ impl Mesh {
                 transmute(&indices[0]),
                 gl::STATIC_DRAW);
 
-            gl::EnableVertexAttribArray(POSITION_LOCATION);
-            gl::VertexAttribPointer(
-                POSITION_LOCATION,
-                3,
-                gl::FLOAT,
-                gl::FALSE as GLboolean,
-                size_of::<Vertex>() as GLsizei,
-                offset_of!(Vertex, position) as *const _);
-
-            gl::EnableVertexAttribArray(NORMAL_LOCATION);
-            gl::VertexAttribPointer(
-                NORMAL_LOCATION,
-                3,
-                gl::FLOAT,
-                gl::FALSE as GLboolean,
-                size_of::<Vertex>() as GLsizei,
-                offset_of!(Vertex, normal) as *const _);
-
-            gl::EnableVertexAttribArray(COLOR_LOCATION);
-            gl::VertexAttribPointer(
-                COLOR_LOCATION,
-                3,
-                gl::FLOAT,
-                gl::FALSE as GLboolean,
-                size_of::<Vertex>() as GLsizei,
-                offset_of!(Vertex, color) as *const _);
-
+            T::init_attrib_pointers();
             gl::BindVertexArray(0);
         }
 
@@ -102,26 +145,20 @@ impl Mesh {
     }
 
     #[allow(dead_code)]
-    pub fn cube () -> Mesh {
+    pub fn cube () -> (Vec<glm::Vec3>, Vec<GLuint>) {
         use glm::vec3;
         let vector = |arr: &[i32]| vec3(arr[0] as f32, arr[1] as f32, arr[2] as f32);
-        let mut vertices = Vec::new();
+        let mut positions = Vec::new();
         let mut indices = Vec::new();
         for face in 0..6 {
             let direction = if face < 3 { -1 } else { 1 };
             let plane = face % 3;
-            let normal = {
-                let mut arr = [0; 3];
-                arr[plane] = direction;
-                vector(&arr)
-            };
-            let color = if direction > 0 { normal } else { normal + 1.0 };
-            vertices.extend(
+            positions.extend(
                 [
                 [0, 0],
-                [0, 1],
-                [1, 1],
                 [1, 0],
+                [1, 1],
+                [0, 1],
                 ].iter()
                 .map(|[a, b]| {
                     let position = {
@@ -129,7 +166,7 @@ impl Mesh {
                         corner.rotate_right(plane);
                         vector(&corner) - 0.5
                     };
-                    Vertex { position, normal, color }
+                    position
                 })
                 );
             indices.extend(
@@ -143,6 +180,22 @@ impl Mesh {
                 }.iter().map(|i| face as GLuint * 4 + i)
                 );
         };
-        Mesh::new(&vertices, indices.as_slice())
+        (positions, indices)
+    }
+
+    #[allow(dead_code)]
+    pub fn quad () -> (Vec<glm::Vec3>, Vec<GLuint>) {
+        use glm::vec3;
+        let positions = vec![
+            vec3(-1., -1., 0.),
+            vec3( 1., -1., 0.),
+            vec3( 1.,  1., 0.),
+            vec3(-1.,  1., 0.),
+        ];
+        let indices = vec![
+            0, 1, 2,
+            2, 3, 0
+        ];
+        (positions, indices)
     }
 }
