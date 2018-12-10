@@ -52,7 +52,7 @@ impl Vertex for ModelVertex {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Mesh {
     vao: GLuint,
     elements: GLsizei,
@@ -88,6 +88,19 @@ impl Mesh {
             .map(|position| {
                 LightVertex {
                     position,
+                }
+            }).collect();
+
+        Mesh::new(&vertices, &indices)
+    }
+
+    pub fn point_light (radius: f32) -> Mesh {
+        let (positions, indices) = Mesh::icosahedron(-radius);
+
+        let vertices: Vec<LightVertex> = positions.into_iter()
+            .map(|pos| {
+                LightVertex {
+                    position: pos * radius,
                 }
             }).collect();
 
@@ -195,6 +208,53 @@ impl Mesh {
         let indices = vec![
             0, 1, 2,
             2, 3, 0
+        ];
+        (positions, indices)
+    }
+
+    #[allow(dead_code)]
+    pub fn icosahedron (radius: f32) -> (Vec<glm::Vec3>, Vec<GLuint>) {
+        use glm::vec3;
+        let t = (1.0 + 5.0f32.sqrt()) / 2.0;
+        let scale = radius / -1.49;
+        let t = scale * t;
+        let mut positions = Vec::with_capacity(3 * 4);
+        for i in 0..4 {
+            let a = i / 2 % 2;
+            let b = i % 2;
+            let a = (a * 2 - 1) as f32;
+            let b = (b * 2 - 1) as f32;
+            for i in 0..3 {
+                let mut coords = [a * scale, b * t, 0.];
+                coords.rotate_right(i);
+                positions.push(vec3(coords[0], coords[1], coords[2]));
+            }
+        }
+
+        let indices = vec![
+            0, 1, 2,
+            0, 2, 8,
+            0, 8, 4,
+            0, 4, 6,
+            0, 6, 1,
+
+            9, 7, 5,
+            9, 3, 7,
+            9, 10, 3,
+            9, 11, 10,
+            9, 5, 11,
+
+            1, 7, 2,
+            2, 3, 8,
+            8, 10, 4,
+            4, 11, 6,
+            6, 5, 1,
+
+            7, 1, 5,
+            3, 2, 7,
+            10, 8, 3,
+            11, 4, 10,
+            5, 6, 11,
         ];
         (positions, indices)
     }
