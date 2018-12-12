@@ -6,20 +6,15 @@ use model::Model;
 use mesh::Mesh;
 use glerror;
 
-pub struct PointLight {
-    radius: f32,
-    position: Vec3,
-    color: Vec3,
+pub struct DirectionalLight {
+    pub direction: Vec3,
+    pub color: Vec3,
 }
 
-impl PointLight {
-    pub fn new (radius: f32, position: Vec3, color: Vec3) -> Self {
-        Self {
-            radius,
-            position,
-            color
-        }
-    }
+pub struct PointLight {
+    pub radius: f32,
+    pub position: Vec3,
+    pub color: Vec3,
 }
 
 struct Framebuffer {
@@ -124,11 +119,15 @@ static AMBIENT_FRAG: &'static str = include_str!("shaders/ambient.light.frag");
 static POINT_VERT: &'static str = include_str!("shaders/point.light.vert");
 static POINT_FRAG: &'static str = include_str!("shaders/point.light.frag");
 
+static DIR_VERT: &'static str = include_str!("shaders/ambient.light.vert");
+static DIR_FRAG: &'static str = include_str!("shaders/directional.light.frag");
+
 pub struct Renderer {
     framebuffer: Framebuffer,
     model_shader: Shader,
     ambient_shader: Shader,
-    ambient_mesh: Mesh,
+    directional_shader: Shader,
+    quad_mesh: Mesh,
     point_shader: Shader,
     point_mesh: Mesh,
 }
@@ -147,7 +146,8 @@ impl Renderer {
             },
             model_shader: Shader::from_vert_frag(VS_SRC, FS_SRC),
             ambient_shader: Shader::from_vert_frag(AMBIENT_VERT, AMBIENT_FRAG),
-            ambient_mesh: Mesh::ambient_light(),
+            directional_shader: Shader::from_vert_frag(DIR_VERT, DIR_FRAG),
+            quad_mesh: Mesh::ambient_light(),
             point_shader: Shader::from_vert_frag(POINT_VERT, POINT_FRAG),
             point_mesh: Mesh::point_light(1.0),
         }
@@ -158,6 +158,7 @@ impl Renderer {
         camera: &Camera,
         models: &[Model],
         ambient: glm::Vec3,
+        directional_lights: &[DirectionalLight],
         point_lights: &[PointLight],
         ) {
         let projection = camera.projection();
@@ -190,7 +191,15 @@ impl Renderer {
         unsafe {
             gl::Uniform3fv(1, 1, &ambient[0]);
         }
-        self.ambient_mesh.draw();
+        self.quad_mesh.draw();
+        self.directional_shader.activate();
+        for light in directional_lights.iter() {
+            unsafe {
+                gl::Uniform3fv(1, 1, &light.direction[0]);
+                gl::Uniform3fv(2, 1, &light.color[0]);
+            }
+            self.quad_mesh.draw();
+        }
 
         self.point_shader.activate();
         for light in point_lights.iter() {

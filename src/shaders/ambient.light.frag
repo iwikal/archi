@@ -1,9 +1,9 @@
 #version 430 core
 
-in vec3 color;
-in vec2 uv;
-
+layout (location = 1) uniform vec3 color;
 uniform sampler2D color_buffer;
+
+in vec2 uv;
 
 out vec4 FragColor;
 

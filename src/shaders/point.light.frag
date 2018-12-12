@@ -26,8 +26,8 @@ void main () {
   vec3 color = texture(color_buffer, uv).xyz;
   vec3 normal = texture(normal_buffer, uv).xyz;
   vec3 position = texture(position_buffer, uv).xyz;
-  vec3 light_dir = normalize(center - position);
-  float diff = max(dot(normal, light_dir), 0.0);
+  vec3 light_dir = normalize(position - center);
+  float diff = max(dot(normal, -light_dir), 0.0);
   float att = attenuation(position, center);
   FragColor = vec4(color * light_color * att * diff, 0);
 }

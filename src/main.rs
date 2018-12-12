@@ -31,19 +31,24 @@ fn main() {
     let ambient_color = glm::vec3(0.01, 0.01, 0.01);
 
     let point_lights = {
-        use renderer::PointLight;
+        use renderer::PointLight as Light;
+        use glm::vec3;
         [
-            (glm::vec3(-1.3, 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
-            (glm::vec3(0., 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
-            (glm::vec3(1.3, 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
-            (glm::vec3(0., -0.5, 2.), glm::vec3(0.5, 0.5, 1.)),
-            (glm::vec3(0., -0.5, -2.), glm::vec3(0.5, 0.5, 1.)),
-            (glm::vec3(3.5, 4.3, 1.), glm::vec3(1., 0., 0.)),
-        ].into_iter()
-            .map(|&(position, color)| {
-                PointLight::new(2.0, position, color)
-            })
-            .collect::<Vec<PointLight>>()
+            Light { radius: 2.0, position: vec3(-1.3, 2.5, 0.), color: vec3(0.5, 0.5, 0.4) },
+            Light { radius: 2.0, position: vec3(0., 2.5, 0.), color: vec3(0.5, 0.5, 0.4) },
+            Light { radius: 2.0, position: vec3(1.3, 2.5, 0.), color: vec3(0.5, 0.5, 0.4) },
+            Light { radius: 2.0, position: vec3(0., -0.5, 2.), color: vec3(0.5, 0.5, 1.) },
+            Light { radius: 2.0, position: vec3(0., -0.5, -2.), color: vec3(0.5, 0.5, 1.) },
+            Light { radius: 2.0, position: vec3(3.5, 4.3, 1.), color: vec3(1., 0., 0.) },
+        ]
+    };
+
+    let dir_lights = {
+        use renderer::DirectionalLight as Light;
+        use glm::vec3;
+        [
+            Light { direction: vec3(-1., -1., -1.), color: vec3(0.1, 0.1, 0.15) },
+        ]
     };
 
     #[allow(unused_variables)]
@@ -203,7 +208,7 @@ fn main() {
 
         camera.take_input(&event_pump, delta_seconds);
 
-        renderer.render(&camera, &models, ambient_color, &point_lights);
+        renderer.render(&camera, &models, ambient_color, &dir_lights, &point_lights);
         window.gl_swap_window();
         previous_time = now;
     }
