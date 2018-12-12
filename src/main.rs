@@ -5,25 +5,12 @@ extern crate glm;
 extern crate rand;
 extern crate tobj;
 
-// Shader sources
-static VS_SRC: &'static str = include_str!("shaders/basicShader.vert");
-static FS_SRC: &'static str = include_str!("shaders/basicShader.frag");
-
-// Shader sources
-static BUF_VIS_VS_SRC: &'static str = include_str!("shaders/bufVis.vert");
-static BUF_VIS_FS_SRC: &'static str = include_str!("shaders/bufVis.frag");
-
-static AMBIENT_VERT: &'static str = include_str!("shaders/ambient.light.vert");
-static AMBIENT_FRAG: &'static str = include_str!("shaders/ambient.light.frag");
-
-static POINT_VERT: &'static str = include_str!("shaders/point.light.vert");
-static POINT_FRAG: &'static str = include_str!("shaders/point.light.frag");
-
 mod shader;
 mod mesh;
 mod camera;
 mod model;
 mod glerror;
+mod renderer;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -39,57 +26,24 @@ fn main() {
     let _gl_context = window.gl_create_context().unwrap();
     gl::load_with(|s| video_system.gl_get_proc_address(s) as * const _);
 
-    let shader = {
-        let sources = [
-            (VS_SRC, gl::VERTEX_SHADER),
-            (FS_SRC, gl::FRAGMENT_SHADER),
-        ];
-        let shader = shader::Shader::from_sources(&sources);
-        shader
-    };
+    let renderer = renderer::Renderer::new(width as i32, height as i32);
 
-    let ambient_shader = {
-        let sources = [
-            (AMBIENT_VERT, gl::VERTEX_SHADER),
-            (AMBIENT_FRAG, gl::FRAGMENT_SHADER),
-        ];
-        let shader = shader::Shader::from_sources(&sources);
-        shader
-    };
+    let ambient_color = glm::vec3(0.01, 0.01, 0.01);
 
-    let ambient_mesh = {
-        mesh::Mesh::ambient_light()
-    };
-
-    let ambient_color = glm::vec3(0.1, 0.1, 0.1);
-
-    let point_light_shader = {
-        let sources = [
-            (POINT_VERT, gl::VERTEX_SHADER),
-            (POINT_FRAG, gl::FRAGMENT_SHADER),
-        ];
-        let shader = shader::Shader::from_sources(&sources);
-        shader
-    };
-
-    let point_mesh = mesh::Mesh::point_light(5.0);
-    let point_lights = [
-        (glm::vec3(-1.3, 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
-        (glm::vec3(0., 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
-        (glm::vec3(1.3, 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
-        (glm::vec3(0., -0.5, 2.), glm::vec3(0.5, 0.5, 1.)),
-        (glm::vec3(0., -0.5, -2.), glm::vec3(0.5, 0.5, 1.)),
-        (glm::vec3(4., 4., 1.), glm::vec3(1., 0., 0.)),
-    ];
-
-    #[allow(unused_variables)]
-    let buffer_vis_shader = {
-        let sources = [
-            (BUF_VIS_VS_SRC, gl::VERTEX_SHADER),
-            (BUF_VIS_FS_SRC, gl::FRAGMENT_SHADER)
-        ];
-        let shader = shader::Shader::from_sources(&sources);
-        shader
+    let point_lights = {
+        use renderer::PointLight;
+        [
+            (glm::vec3(-1.3, 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
+            (glm::vec3(0., 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
+            (glm::vec3(1.3, 2.5, 0.), glm::vec3(0.5, 0.5, 0.4)),
+            (glm::vec3(0., -0.5, 2.), glm::vec3(0.5, 0.5, 1.)),
+            (glm::vec3(0., -0.5, -2.), glm::vec3(0.5, 0.5, 1.)),
+            (glm::vec3(3.5, 4.3, 1.), glm::vec3(1., 0., 0.)),
+        ].into_iter()
+            .map(|&(position, color)| {
+                PointLight::new(2.0, position, color)
+            })
+            .collect::<Vec<PointLight>>()
     };
 
     #[allow(unused_variables)]
@@ -249,61 +203,7 @@ fn main() {
 
         camera.take_input(&event_pump, delta_seconds);
 
-        unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
-            gl::Enable(gl::DEPTH_TEST);
-            gl::Disable(gl::BLEND);
-
-            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-        };
-        shader.activate();
-        for m in models.iter() {
-            m.render(&camera);
-        }
-
-        unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-            gl::Disable(gl::DEPTH_TEST);
-            gl::Enable(gl::BLEND);
-
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            let buffers = [
-                color_buffer,
-                normal_buffer,
-                position_buffer,
-                depth_buffer
-            ];
-            gl::BindTextures(0, 4, &buffers[0]);
-        }
-
-        ambient_shader.activate();
-        unsafe {
-            gl::Uniform3fv(1, 1, &ambient_color[0]);
-        }
-        ambient_mesh.draw();
-
-        point_light_shader.activate();
-        for light in point_lights.iter() {
-            let (position, color) = light;
-            let view = camera.view();
-            let projection = camera.projection();
-            let vp = projection * view;
-            let mvp = glm::ext::translate(&vp, *position);
-
-            unsafe {
-                gl::UniformMatrix4fv(1,
-                                     1,
-                                     gl::FALSE,
-                                     &(mvp[0][0]));
-
-                gl::Uniform3fv(2, 1, &position[0]);
-                gl::Uniform3fv(3, 1, &color[0]);
-                point_mesh.draw();
-            }
-        }
-        assert_no_gl_error!();
-
+        renderer.render(&camera, &models, ambient_color, &point_lights);
         window.gl_swap_window();
         previous_time = now;
     }

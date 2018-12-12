@@ -1,3 +1,5 @@
+#![macro_use]
+
 fn error_string(error: gl::types::GLuint) -> &'static str {
     match error {
         gl::NO_ERROR => "GL_NO_ERROR",
@@ -28,7 +30,6 @@ pub fn print_gl_errors() -> bool {
     } else { false }
 }
 
-#[macro_export]
 macro_rules! assert_no_gl_error {
     () => {
         if glerror::print_gl_errors() { panic!("expected no GL errors") }

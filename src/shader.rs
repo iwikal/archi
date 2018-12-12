@@ -4,51 +4,63 @@ use std::ptr;
 use gl::types::*;
 use glerror::*;
 
-type ShaderUnit = GLuint;
+struct ShaderUnit {
+    name: GLuint,
+}
 
-fn compile (src: &str, ty: GLenum) -> ShaderUnit {
-    let typestr = match ty {
-        gl::FRAGMENT_SHADER => "Fragment",
-        gl::GEOMETRY_SHADER => "Geometry",
-        gl::VERTEX_SHADER => "Vertex",
-        _ => panic!("Unknown shader type {}", ty)
-    };
-    unsafe {
-        let shader = gl::CreateShader(ty);
-        // Attempt to compile the shader
-        let c_str = CString::new(src.as_bytes()).unwrap();
-        gl::ShaderSource(shader, 1, &c_str.as_ptr(), ptr::null());
-        gl::CompileShader(shader);
+impl ShaderUnit {
+    fn new (src: &str, ty: GLenum) -> Self {
+        let typestr = match ty {
+            gl::FRAGMENT_SHADER => "Fragment",
+            gl::GEOMETRY_SHADER => "Geometry",
+            gl::VERTEX_SHADER => "Vertex",
+            _ => panic!("Unknown shader type {}", ty)
+        };
+        unsafe {
+            let name = gl::CreateShader(ty);
+            // Attempt to compile the shader
+            let c_str = CString::new(src.as_bytes()).unwrap();
+            gl::ShaderSource(name, 1, &c_str.as_ptr(), ptr::null());
+            gl::CompileShader(name);
 
-        let mut len = 0;
-        gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
-        if len > 0 {
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetShaderInfoLog(
-                shader,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-                );
-            println!(
-                "{} shader info:\n{}",
-                typestr,
-                str::from_utf8(&buf)
-                .ok()
-                .expect("ShaderInfoLog not valid utf8")
-                );
+            let mut len = 0;
+            gl::GetShaderiv(name, gl::INFO_LOG_LENGTH, &mut len);
+            if len > 0 {
+                let mut buf = Vec::with_capacity(len as usize);
+                buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
+                gl::GetShaderInfoLog(
+                    name,
+                    len,
+                    ptr::null_mut(),
+                    buf.as_mut_ptr() as *mut GLchar,
+                    );
+                println!(
+                    "{} shader info:\n{}",
+                    typestr,
+                    str::from_utf8(&buf)
+                    .ok()
+                    .expect("ShaderInfoLog not valid utf8")
+                    );
+            }
+
+            // Get the compile status
+            let mut status = gl::FALSE as GLint;
+            gl::GetShaderiv(name, gl::COMPILE_STATUS, &mut status);
+
+            // Fail on error
+            if status != (gl::TRUE as GLint) {
+                panic!("Failed to compile shader");
+            }
+            ShaderUnit { name }
         }
+    }
+}
 
-        // Get the compile status
-        let mut status = gl::FALSE as GLint;
-        gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            panic!("Failed to compile shader");
+impl Drop for ShaderUnit {
+    fn drop (&mut self) {
+        unsafe {
+            gl::DeleteShader(self.name);
         }
-        shader
     }
 }
 
@@ -59,12 +71,63 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn from_sources (sources: &[(&str, GLenum)]) -> Shader {
+    fn link (units: &[ShaderUnit]) -> Self {
+        unsafe {
+            let program = gl::CreateProgram();
+            for unit in units.iter() {
+                gl::AttachShader(program, unit.name);
+            }
+            gl::LinkProgram(program);
+            for unit in units.iter() {
+                gl::DetachShader(program, unit.name);
+            }
+
+            let mut len = 0;
+            gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
+            if len > 0 {
+                gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
+                let mut buf = Vec::with_capacity(len as usize);
+                buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
+                gl::GetProgramInfoLog(
+                    program,
+                    len,
+                    ptr::null_mut(),
+                    buf.as_mut_ptr() as *mut GLchar,
+                    );
+                println!(
+                    "shader program info:\n{}",
+                    str::from_utf8(&buf)
+                    .ok()
+                    .expect("ProgramInfoLog not valid utf8")
+                    );
+            }
+
+            // Get the link status
+            let mut status = gl::FALSE as GLint;
+            gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
+
+            // Fail on error
+            if status != (gl::TRUE as GLint) {
+                panic!("Failed to link shader",);
+            }
+            Shader { name: program }
+        }
+    }
+
+    pub fn from_sources (sources: &[(&str, GLenum)]) -> Self {
         let mut units = Vec::new();
         for (source, ty) in sources {
-            units.push(compile(source, *ty));
+            units.push(ShaderUnit::new(source, *ty));
         }
-        link(&units)
+        Self::link(&units)
+    }
+
+    pub fn from_vert_frag (vert: &str, frag: &str) -> Self {
+        let sources = [
+            (vert, gl::VERTEX_SHADER),
+            (frag, gl::FRAGMENT_SHADER),
+        ];
+        Self::from_sources(&sources)
     }
 
     #[allow(dead_code)]
@@ -86,47 +149,18 @@ impl Shader {
     }
 
     pub fn activate (&self) {
-        unsafe { gl::UseProgram(self.name) };
-        print_gl_errors();
+        unsafe { gl::UseProgram(self.name); }
+    }
+
+    pub fn deactivate () {
+        unsafe { gl::UseProgram(0); }
     }
 }
 
-fn link (units: &[ShaderUnit]) -> Shader {
-    unsafe {
-        let program = gl::CreateProgram();
-        for unit in units.iter() {
-            gl::AttachShader(program, *unit);
+impl Drop for Shader {
+    fn drop (&mut self) {
+        unsafe {
+            gl::DeleteProgram(self.name)
         }
-        gl::LinkProgram(program);
-
-        let mut len = 0;
-        gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
-        if len > 0 {
-            gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetProgramInfoLog(
-                program,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-                );
-            println!(
-                "shader program info:\n{}",
-                str::from_utf8(&buf)
-                .ok()
-                .expect("ProgramInfoLog not valid utf8")
-                );
-        }
-
-        // Get the link status
-        let mut status = gl::FALSE as GLint;
-        gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            panic!("Failed to link shader",);
-        }
-        Shader { name: program }
     }
 }

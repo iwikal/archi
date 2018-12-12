@@ -4,6 +4,7 @@ in vec4 gl_FragCoord;
 
 layout (location = 2) uniform vec3 center;
 layout (location = 3) uniform vec3 light_color;
+layout (location = 4) uniform float radius;
 
 layout (binding = 0) uniform sampler2D color_buffer;
 layout (binding = 1) uniform sampler2D normal_buffer;
@@ -13,7 +14,7 @@ layout (binding = 3) uniform sampler2D depth_buffer;
 out vec4 FragColor;
 
 float attenuation (vec3 position, vec3 center) {
-  float d = distance(position, center) / 5.0;
+  float d = distance(position, center) / radius;
   float linear = 1.0 - d;
   float quadratic = 1.0 / (d * d);
   return min(linear, quadratic);
