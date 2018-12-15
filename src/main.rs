@@ -1,54 +1,79 @@
-extern crate sdl2;
 extern crate gl;
-extern crate num;
 extern crate glm;
+extern crate num;
 extern crate rand;
+extern crate sdl2;
 extern crate tobj;
 
-mod shader;
-mod mesh;
 mod camera;
-mod model;
 mod glerror;
+mod mesh;
+mod model;
 mod renderer;
+mod shader;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_system = sdl_context.video().unwrap();
-    sdl_context.mouse()
-        .set_relative_mouse_mode(true);
-    let window = video_system.window("archi", 800, 600)
+    sdl_context.mouse().set_relative_mouse_mode(true);
+    let window = video_system
+        .window("archi", 800, 600)
         .fullscreen_desktop()
         .opengl()
         .build()
         .unwrap();
     let (width, height) = window.size();
     let _gl_context = window.gl_create_context().unwrap();
-    gl::load_with(|s| video_system.gl_get_proc_address(s) as * const _);
+    gl::load_with(|s| video_system.gl_get_proc_address(s) as *const _);
 
     let renderer = renderer::Renderer::new(width as i32, height as i32);
 
     let ambient_color = glm::vec3(0.01, 0.01, 0.01);
 
     let point_lights = {
-        use renderer::PointLight as Light;
         use glm::vec3;
+        use renderer::PointLight as Light;
         [
-            Light { radius: 2.0, position: vec3(-1.3, 2.5, 0.), color: vec3(0.5, 0.5, 0.4) },
-            Light { radius: 2.0, position: vec3(0., 2.5, 0.), color: vec3(0.5, 0.5, 0.4) },
-            Light { radius: 2.0, position: vec3(1.3, 2.5, 0.), color: vec3(0.5, 0.5, 0.4) },
-            Light { radius: 2.0, position: vec3(0., -0.5, 2.), color: vec3(0.5, 0.5, 1.) },
-            Light { radius: 2.0, position: vec3(0., -0.5, -2.), color: vec3(0.5, 0.5, 1.) },
-            Light { radius: 2.0, position: vec3(3.5, 4.3, 1.), color: vec3(1., 0., 0.) },
+            Light {
+                radius: 2.0,
+                position: vec3(-1.3, 2.5, 0.),
+                color: vec3(0.5, 0.5, 0.4),
+            },
+            Light {
+                radius: 2.0,
+                position: vec3(0., 2.5, 0.),
+                color: vec3(0.5, 0.5, 0.4),
+            },
+            Light {
+                radius: 2.0,
+                position: vec3(1.3, 2.5, 0.),
+                color: vec3(0.5, 0.5, 0.4),
+            },
+            Light {
+                radius: 2.0,
+                position: vec3(0., -0.5, 2.),
+                color: vec3(0.5, 0.5, 1.),
+            },
+            Light {
+                radius: 2.0,
+                position: vec3(0., -0.5, -2.),
+                color: vec3(0.5, 0.5, 1.),
+            },
+            Light {
+                radius: 2.0,
+                position: vec3(3.5, 4.3, 1.),
+                color: vec3(1., 0., 0.),
+            },
         ]
     };
 
     let dir_lights = {
-        use renderer::DirectionalLight as Light;
         use glm::vec3;
-        [
-            Light { direction: vec3(-1., -1., -1.), color: vec3(0.1, 0.1, 0.15) },
-        ]
+        use renderer::DirectionalLight as Light;
+        [Light {
+            direction: vec3(-1., -1., -1.),
+            color: vec3(0.1, 0.1, 0.15),
+        }]
     };
 
     #[allow(unused_variables)]
@@ -69,79 +94,75 @@ fn main() {
 
             gl::GenTextures(1, &mut color_buffer);
             gl::BindTexture(gl::TEXTURE_2D, color_buffer);
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           gl::RGB as GLint,
-                           width,
-                           height,
-                           0,
-                           gl::RGB,
-                           gl::UNSIGNED_BYTE,
-                           ptr::null());
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGB as GLint,
+                width,
+                height,
+                0,
+                gl::RGB,
+                gl::UNSIGNED_BYTE,
+                ptr::null(),
+            );
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
 
-            gl::FramebufferTexture(gl::FRAMEBUFFER,
-                                   gl::COLOR_ATTACHMENT0,
-                                   color_buffer,
-                                   0);
+            gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, color_buffer, 0);
 
             gl::GenTextures(1, &mut normal_buffer);
             gl::BindTexture(gl::TEXTURE_2D, normal_buffer);
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           gl::RGBA16F as GLint,
-                           width,
-                           height,
-                           0,
-                           gl::RGB,
-                           gl::UNSIGNED_BYTE,
-                           ptr::null());
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGBA16F as GLint,
+                width,
+                height,
+                0,
+                gl::RGB,
+                gl::UNSIGNED_BYTE,
+                ptr::null(),
+            );
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
 
             gl::GenTextures(1, &mut position_buffer);
             gl::BindTexture(gl::TEXTURE_2D, position_buffer);
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           gl::RGBA16F as GLint,
-                           width,
-                           height,
-                           0,
-                           gl::RGBA,
-                           gl::UNSIGNED_BYTE,
-                           ptr::null());
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGBA16F as GLint,
+                width,
+                height,
+                0,
+                gl::RGBA,
+                gl::UNSIGNED_BYTE,
+                ptr::null(),
+            );
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
 
-            gl::FramebufferTexture(gl::FRAMEBUFFER,
-                                   gl::COLOR_ATTACHMENT2,
-                                   position_buffer,
-                                   0);
+            gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT2, position_buffer, 0);
 
-            gl::FramebufferTexture(gl::FRAMEBUFFER,
-                                   gl::COLOR_ATTACHMENT1,
-                                   normal_buffer,
-                                   0);
+            gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT1, normal_buffer, 0);
 
             gl::GenTextures(1, &mut depth_buffer);
             gl::BindTexture(gl::TEXTURE_2D, depth_buffer);
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           gl::DEPTH_COMPONENT as i32,
-                           width,
-                           height,
-                           0,
-                           gl::DEPTH_COMPONENT,
-                           gl::UNSIGNED_BYTE,
-                           ptr::null());
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::DEPTH_COMPONENT as i32,
+                width,
+                height,
+                0,
+                gl::DEPTH_COMPONENT,
+                gl::UNSIGNED_BYTE,
+                ptr::null(),
+            );
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
 
-            gl::FramebufferTexture(gl::FRAMEBUFFER,
-                                   gl::DEPTH_ATTACHMENT,
-                                   depth_buffer,
-                                   0);
+            gl::FramebufferTexture(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, depth_buffer, 0);
 
             let attachments = [
                 gl::COLOR_ATTACHMENT0,
@@ -156,16 +177,24 @@ fn main() {
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             assert_no_gl_error!();
         }
-        (fbo, color_buffer, normal_buffer, position_buffer, depth_buffer)
+        (
+            fbo,
+            color_buffer,
+            normal_buffer,
+            position_buffer,
+            depth_buffer,
+        )
     };
-
 
     let models = {
         use model::*;
-        let meshes = model::from_obj("../../assets/models/spaceship/transport_shuttle.obj",
-                                     1.0,
-                                     true);
-        meshes.into_iter()
+        let meshes = model::from_obj(
+            "../../assets/models/spaceship/transport_shuttle.obj",
+            1.0,
+            true,
+        );
+        meshes
+            .into_iter()
             .map(|mesh| {
                 let mesh = Box::new(mesh);
                 let mesh = Box::leak(mesh);
@@ -184,7 +213,7 @@ fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut should_quit = false;
-    use std::time::{ Instant };
+    use std::time::Instant;
     let mut previous_time = Instant::now();
     while !should_quit {
         let now = Instant::now();
@@ -193,15 +222,19 @@ fn main() {
         for e in event_pump.poll_iter() {
             use sdl2::event::Event;
             match e {
-                Event::Quit {..} => { should_quit = true; },
-                Event::KeyDown {scancode, ..} => {
+                Event::Quit { .. } => {
+                    should_quit = true;
+                }
+                Event::KeyDown { scancode, .. } => {
                     if let Some(key) = scancode {
                         match key.name() {
-                            "Escape" => { should_quit = true; },
+                            "Escape" => {
+                                should_quit = true;
+                            }
                             _ => {}
                         }
                     }
-                },
+                }
                 _ => {}
             }
         }

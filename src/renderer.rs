@@ -1,10 +1,10 @@
-use gl::types::*;
-use glm::{ Vec3 };
-use shader::Shader;
 use camera::Camera;
-use model::Model;
-use mesh::Mesh;
+use gl::types::*;
 use glerror;
+use glm::Vec3;
+use mesh::Mesh;
+use model::Model;
+use shader::Shader;
 
 pub struct DirectionalLight {
     pub direction: Vec3,
@@ -23,59 +23,71 @@ struct Framebuffer {
 }
 
 impl Framebuffer {
-    pub fn new (width: i32, height: i32, formats: &[GLenum]) -> Self {
+    pub fn new(width: i32, height: i32, formats: &[GLenum]) -> Self {
         unsafe {
             let mut name = 0;
             gl::GenFramebuffers(1, &mut name);
             gl::BindFramebuffer(gl::FRAMEBUFFER, name);
 
             let buffers = {
-                formats.iter()
+                formats
+                    .iter()
                     .enumerate()
                     .map(|(i, &format)| {
                         let mut buffer = 0;
                         gl::GenTextures(1, &mut buffer);
                         gl::BindTexture(gl::TEXTURE_2D, buffer);
-                        gl::TexImage2D(gl::TEXTURE_2D,
-                                       0,
-                                       format as GLint,
-                                       width,
-                                       height,
-                                       0,
-                                       gl::RGB,
-                                       gl::UNSIGNED_BYTE,
-                                       std::ptr::null());
-                        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
-                        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+                        gl::TexImage2D(
+                            gl::TEXTURE_2D,
+                            0,
+                            format as GLint,
+                            width,
+                            height,
+                            0,
+                            gl::RGB,
+                            gl::UNSIGNED_BYTE,
+                            std::ptr::null(),
+                        );
+                        gl::TexParameteri(
+                            gl::TEXTURE_2D,
+                            gl::TEXTURE_MIN_FILTER,
+                            gl::LINEAR as GLint,
+                        );
+                        gl::TexParameteri(
+                            gl::TEXTURE_2D,
+                            gl::TEXTURE_MAG_FILTER,
+                            gl::LINEAR as GLint,
+                        );
 
-                        gl::FramebufferTexture(gl::FRAMEBUFFER,
-                                               gl::COLOR_ATTACHMENT0 + i as GLuint,
-                                               buffer,
-                                               0);
+                        gl::FramebufferTexture(
+                            gl::FRAMEBUFFER,
+                            gl::COLOR_ATTACHMENT0 + i as GLuint,
+                            buffer,
+                            0,
+                        );
                         buffer
                     })
-                .collect::<Vec<GLuint>>()
+                    .collect::<Vec<GLuint>>()
             };
 
             let mut depth_buffer = 0;
             gl::GenTextures(1, &mut depth_buffer);
             gl::BindTexture(gl::TEXTURE_2D, depth_buffer);
-            gl::TexImage2D(gl::TEXTURE_2D,
-                           0,
-                           gl::DEPTH_COMPONENT as i32,
-                           width,
-                           height,
-                           0,
-                           gl::DEPTH_COMPONENT,
-                           gl::UNSIGNED_BYTE,
-                           std::ptr::null());
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::DEPTH_COMPONENT as i32,
+                width,
+                height,
+                0,
+                gl::DEPTH_COMPONENT,
+                gl::UNSIGNED_BYTE,
+                std::ptr::null(),
+            );
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
 
-            gl::FramebufferTexture(gl::FRAMEBUFFER,
-                                   gl::DEPTH_ATTACHMENT,
-                                   depth_buffer,
-                                   0);
+            gl::FramebufferTexture(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, depth_buffer, 0);
 
             let attachments = [
                 gl::COLOR_ATTACHMENT0,
@@ -90,20 +102,17 @@ impl Framebuffer {
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
             assert_no_gl_error!();
 
-            Self {
-                name,
-                buffers,
-            }
+            Self { name, buffers }
         }
     }
 
-    pub fn bind (&self) {
+    pub fn bind(&self) {
         unsafe {
             gl::BindFramebuffer(gl::FRAMEBUFFER, self.name);
         }
     }
 
-    pub fn unbind () {
+    pub fn unbind() {
         unsafe {
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
         }
@@ -133,14 +142,10 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new (width: i32, height: i32) -> Self {
+    pub fn new(width: i32, height: i32) -> Self {
         Self {
             framebuffer: {
-                let formats = [
-                    gl::RGB,
-                    gl::RGBA16F,
-                    gl::RGB16F,
-                ];
+                let formats = [gl::RGB, gl::RGBA16F, gl::RGB16F];
 
                 Framebuffer::new(width, height, &formats)
             },
@@ -153,14 +158,14 @@ impl Renderer {
         }
     }
 
-    pub fn render (
+    pub fn render(
         &self,
         camera: &Camera,
         models: &[Model],
         ambient: glm::Vec3,
         directional_lights: &[DirectionalLight],
         point_lights: &[PointLight],
-        ) {
+    ) {
         let projection = camera.projection();
         let view = camera.view();
         let view_projection = projection * view;
@@ -203,17 +208,18 @@ impl Renderer {
 
         self.point_shader.activate();
         for light in point_lights.iter() {
-            let &PointLight { position, color, radius } = light;
+            let &PointLight {
+                position,
+                color,
+                radius,
+            } = light;
             let model = num::one();
             let model = glm::ext::translate(&model, position);
             let model = glm::ext::scale(&model, glm::vec3(radius, radius, radius));
             let mvp = view_projection * model;
 
             unsafe {
-                gl::UniformMatrix4fv(1,
-                                     1,
-                                     gl::FALSE,
-                                     &(mvp[0][0]));
+                gl::UniformMatrix4fv(1, 1, gl::FALSE, &(mvp[0][0]));
 
                 gl::Uniform3fv(2, 1, &position[0]);
                 gl::Uniform3fv(3, 1, &color[0]);

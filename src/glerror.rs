@@ -10,14 +10,17 @@ fn error_string(error: gl::types::GLuint) -> &'static str {
         gl::OUT_OF_MEMORY => "GL_OUT_OF_MEMORY",
         gl::STACK_UNDERFLOW => "GL_STACK_UNDERFLOW",
         gl::STACK_OVERFLOW => "GL_STACK_OVERFLOW",
-        _ => "Not a valid GLerror"
+        _ => "Not a valid GLerror",
     }
 }
 
 fn get_error() -> Option<&'static str> {
     let error = unsafe { gl::GetError() };
-    if error == gl::NO_ERROR { None }
-    else { Some(error_string(error)) }
+    if error == gl::NO_ERROR {
+        None
+    } else {
+        Some(error_string(error))
+    }
 }
 
 pub fn print_gl_errors() -> bool {
@@ -27,11 +30,15 @@ pub fn print_gl_errors() -> bool {
             eprintln!("GL error: {}", error);
         }
         true
-    } else { false }
+    } else {
+        false
+    }
 }
 
 macro_rules! assert_no_gl_error {
     () => {
-        if glerror::print_gl_errors() { panic!("expected no GL errors") }
-    }
+        if glerror::print_gl_errors() {
+            panic!("expected no GL errors")
+        }
+    };
 }
