@@ -158,6 +158,7 @@ static POST_FRAG: &'static str = include_str!("shaders/post.frag");
 pub struct Renderer {
     width: i32,
     height: i32,
+    pub res_factor: i32,
     g_buffer: Framebuffer,
     light_buffer: Framebuffer,
     post_buffer: Framebuffer,
@@ -169,8 +170,6 @@ pub struct Renderer {
     point_shader: Shader,
     point_mesh: Mesh,
 }
-
-static RES_FACTOR: i32 = 4;
 
 impl Renderer {
     pub fn new(width: i32, height: i32) -> Self {
@@ -219,13 +218,14 @@ impl Renderer {
         Self {
             width,
             height,
+            res_factor: 1,
             g_buffer: {
                 let formats = [gl::RGB, gl::RGBA16F, gl::RGB16F];
 
                 Framebuffer::new(width, height, &formats)
             },
             light_buffer: Framebuffer::new(width, height, &[gl::RGB]),
-            post_buffer: Framebuffer::new(width / RES_FACTOR, height / RES_FACTOR, &[gl::RGB]),
+            post_buffer: Framebuffer::new(width, height, &[gl::RGB]),
             model_shader: Shader::from_vert_frag(VS_SRC, FS_SRC),
             ambient_shader: Shader::from_vert_frag(AMBIENT_VERT, AMBIENT_FRAG),
             directional_shader: Shader::from_vert_frag(DIR_VERT, DIR_FRAG),
@@ -317,12 +317,12 @@ impl Renderer {
         self.post_buffer.bind();
         self.post_shader.activate();
         unsafe {
-            gl::Viewport(0, 0, self.width / RES_FACTOR, self.height / RES_FACTOR);
+            gl::Viewport(0, 0, self.width / self.res_factor, self.height / self.res_factor);
             gl::Disable(gl::BLEND);
             gl::Clear(gl::COLOR_BUFFER_BIT);
             let buffers = &(self.light_buffer.buffers);
             gl::BindTextures(1, buffers.len() as i32, &buffers[0]);
-            gl::Uniform1i(1, RES_FACTOR);
+            gl::Uniform1i(1, self.res_factor);
             gl::Uniform1i(2, frame_count + 3);
         }
         self.quad_mesh.draw();
@@ -336,8 +336,8 @@ impl Renderer {
             gl::BlitFramebuffer(
                 0,
                 0,
-                self.width / RES_FACTOR,
-                self.height / RES_FACTOR,
+                self.width / self.res_factor,
+                self.height / self.res_factor,
                 0,
                 0,
                 self.width,

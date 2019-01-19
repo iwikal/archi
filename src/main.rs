@@ -26,7 +26,7 @@ fn main() {
     let _gl_context = window.gl_create_context().unwrap();
     gl::load_with(|s| video_system.gl_get_proc_address(s) as *const _);
 
-    let renderer = renderer::Renderer::new(width as i32, height as i32);
+    let mut renderer = renderer::Renderer::new(width as i32, height as i32);
 
     let brightness = 1.0 / 64.0;
     let ambient_color = glm::vec3(brightness, brightness, brightness);
@@ -126,6 +126,15 @@ fn main() {
                             _ => {}
                         }
                     }
+                }
+                Event::MouseWheel { y, .. } => {
+                    renderer.res_factor = if y > 0 {
+                        let f = renderer.res_factor * 2;
+                        if f > 32 { 32 } else { f }
+                    } else {
+                        let f = renderer.res_factor / 2;
+                        if f < 1 { 1 } else { f }
+                    };
                 }
                 _ => {}
             }
