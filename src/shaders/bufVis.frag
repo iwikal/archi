@@ -1,8 +1,8 @@
 #version 430 core
 
 in vec2 tex_coords;
-layout(binding = 0) uniform sampler2D color_buffer;
-layout(binding = 1) uniform sampler2D depth_buffer;
+layout (binding = 1) uniform sampler2D color_buffer;
+layout (binding = 2) uniform sampler2D depth_buffer;
 
 out vec4 FragColor;
 

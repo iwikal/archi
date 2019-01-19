@@ -5,11 +5,13 @@ in vec4 gl_FragCoord;
 layout (location = 2) uniform vec3 center;
 layout (location = 3) uniform vec3 light_color;
 layout (location = 4) uniform float radius;
+layout (location = 5) uniform int frame_count = 0;
 
-layout (binding = 0) uniform sampler2D color_buffer;
-layout (binding = 1) uniform sampler2D normal_buffer;
-layout (binding = 2) uniform sampler2D position_buffer;
-layout (binding = 3) uniform sampler2D depth_buffer;
+layout (binding = 0) uniform sampler2DArray dither_map;
+layout (binding = 1) uniform sampler2D color_buffer;
+layout (binding = 2) uniform sampler2D normal_buffer;
+layout (binding = 3) uniform sampler2D position_buffer;
+layout (binding = 4) uniform sampler2D depth_buffer;
 
 out vec4 FragColor;
 
@@ -18,6 +20,11 @@ float attenuation (vec3 position, vec3 center) {
   float linear = 1.0 - d;
   float quadratic = 1.0 / (d * d);
   return min(linear, quadratic);
+}
+
+vec3 dither () {
+  vec2 dither_coord = gl_FragCoord.xy / textureSize(dither_map, 0).xy;
+  return texture(dither_map, vec3(dither_coord, frame_count)).xyz - 0.5;
 }
 
 void main () {
@@ -29,5 +36,5 @@ void main () {
   vec3 light_dir = normalize(position - center);
   float diff = max(dot(normal, -light_dir), 0.0);
   float att = attenuation(position, center);
-  FragColor = vec4(color * light_color * att * diff, 0);
+  FragColor = vec4(color * light_color * att * diff + dither() / 256, 0);
 }

@@ -28,7 +28,8 @@ fn main() {
 
     let renderer = renderer::Renderer::new(width as i32, height as i32);
 
-    let ambient_color = glm::vec3(0.01, 0.01, 0.01);
+    let brightness = 1.0 / 64.0;
+    let ambient_color = glm::vec3(brightness, brightness, brightness);
 
     let point_lights = {
         use glm::vec3;
@@ -215,6 +216,7 @@ fn main() {
     let mut should_quit = false;
     use std::time::Instant;
     let mut previous_time = Instant::now();
+    let mut frame_count = 0;
     while !should_quit {
         let now = Instant::now();
         let delta_t = now.duration_since(previous_time);
@@ -241,9 +243,17 @@ fn main() {
 
         camera.take_input(&event_pump, delta_seconds);
 
-        renderer.render(&camera, &models, ambient_color, &dir_lights, &point_lights);
+        renderer.render(
+            frame_count,
+            &camera,
+            &models,
+            ambient_color,
+            &dir_lights,
+            &point_lights,
+        );
         window.gl_swap_window();
         previous_time = now;
+        frame_count = (frame_count + 1) % 16;
     }
     println!("Quit");
 }
