@@ -4,6 +4,8 @@ extern crate num;
 extern crate rand;
 extern crate sdl2;
 extern crate tobj;
+extern crate lodepng;
+extern crate rgb;
 
 mod camera;
 mod glerror;
@@ -28,7 +30,7 @@ fn main() {
 
     let mut renderer = renderer::Renderer::new(width as i32, height as i32);
 
-    let brightness = 1.0 / 64.0;
+    let brightness = 1.0 / 512.0;
     let ambient_color = glm::vec3(brightness, brightness, brightness);
 
     let point_lights = {
@@ -107,6 +109,7 @@ fn main() {
     use std::time::Instant;
     let mut previous_time = Instant::now();
     let mut frame_count = 0;
+    let mut temporal_dither = true;
     while !should_quit {
         let now = Instant::now();
         let delta_t = now.duration_since(previous_time);
@@ -123,6 +126,7 @@ fn main() {
                             "Escape" => {
                                 should_quit = true;
                             }
+                            "F" => { temporal_dither = !temporal_dither; }
                             _ => {}
                         }
                     }
@@ -152,7 +156,7 @@ fn main() {
         );
         window.gl_swap_window();
         previous_time = now;
-        frame_count = (frame_count + 1) % 16;
+        if temporal_dither { frame_count = (frame_count + 1) % 16; }
     }
     println!("Quit");
 }

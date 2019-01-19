@@ -4,7 +4,6 @@ use glerror;
 use glm::Vec3;
 use mesh::Mesh;
 use model::Model;
-use rand::prelude::*;
 use shader::Shader;
 
 pub struct DirectionalLight {
@@ -178,18 +177,28 @@ impl Renderer {
             gl::GenTextures(1, &mut dither_map);
             gl::BindTexture(gl::TEXTURE_2D_ARRAY, dither_map);
 
+            let noises = [
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_0.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_1.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_2.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_3.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_4.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_5.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_6.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_7.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_8.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_9.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_10.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_11.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_12.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_13.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_14.png",
+                "../assets/textures/blue-noise/64_64/LDR_RGB1_15.png",
+            ];
+
             let width = 64;
             let height = 64;
-            let depth = 16;
-
-            let size = width * height * depth;
-            let data = {
-                let mut data: Vec<u8> = Vec::with_capacity(3 * size as usize);
-                data.set_len(3 * size as usize);
-                let mut rng = rand::thread_rng();
-                rng.fill_bytes(&mut data);
-                data
-            };
+            let depth = noises.len() as i32;
 
             gl::TexImage3D(
                 gl::TEXTURE_2D_ARRAY,
@@ -201,18 +210,53 @@ impl Renderer {
                 0,
                 gl::RGB,
                 gl::UNSIGNED_BYTE,
-                data.as_ptr() as *const std::ffi::c_void,
+                std::ptr::null()
             );
+
+            for (i, path) in noises.iter().enumerate() {
+                use rgb::*;
+                let image = lodepng::decode32_file(path).unwrap();
+                let data = image.buffer.as_bytes();
+
+                gl::TexSubImage3D(
+                    gl::TEXTURE_2D_ARRAY,
+                    0,
+                    0,
+                    0,
+                    i as i32,
+                    width,
+                    height,
+                    1,
+                    gl::RGBA,
+                    gl::UNSIGNED_BYTE,
+                    data.as_ptr() as *const std::ffi::c_void,
+                );
+            }
 
             gl::TexParameteri(
                 gl::TEXTURE_2D_ARRAY,
                 gl::TEXTURE_MIN_FILTER,
-                gl::LINEAR as GLint,
+                gl::NEAREST as GLint,
             );
             gl::TexParameteri(
                 gl::TEXTURE_2D_ARRAY,
                 gl::TEXTURE_MAG_FILTER,
-                gl::LINEAR as GLint,
+                gl::NEAREST as GLint,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_2D_ARRAY,
+                gl::TEXTURE_WRAP_S,
+                gl::REPEAT as GLint,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_2D_ARRAY,
+                gl::TEXTURE_WRAP_T,
+                gl::REPEAT as GLint,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_2D_ARRAY,
+                gl::TEXTURE_WRAP_R,
+                gl::REPEAT as GLint,
             );
         }
         Self {

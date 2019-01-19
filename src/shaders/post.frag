@@ -27,5 +27,6 @@ void main () {
   }
   vec3 average_color = sum_color / (factor * factor);
   int color_depth = 256;
-  FragColor = vec4(round(average_color * color_depth + dither()) / color_depth, 1.0);
+  vec3 rgb = round(average_color * color_depth + dither()) / color_depth;
+  FragColor = vec4(rgb, 1.0);
 }
