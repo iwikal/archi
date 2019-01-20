@@ -243,21 +243,6 @@ impl Renderer {
                 gl::TEXTURE_MAG_FILTER,
                 gl::NEAREST as GLint,
             );
-            gl::TexParameteri(
-                gl::TEXTURE_2D_ARRAY,
-                gl::TEXTURE_WRAP_S,
-                gl::REPEAT as GLint,
-            );
-            gl::TexParameteri(
-                gl::TEXTURE_2D_ARRAY,
-                gl::TEXTURE_WRAP_T,
-                gl::REPEAT as GLint,
-            );
-            gl::TexParameteri(
-                gl::TEXTURE_2D_ARRAY,
-                gl::TEXTURE_WRAP_R,
-                gl::REPEAT as GLint,
-            );
         }
         Self {
             width,
@@ -317,13 +302,13 @@ impl Renderer {
         self.ambient_shader.activate();
         unsafe {
             gl::Uniform3fv(1, 1, &ambient[0]);
-            gl::Uniform1i(2, frame_count + 0);
+            gl::Uniform1i(2, frame_count);
         }
         self.quad_mesh.draw();
 
         self.directional_shader.activate();
         unsafe {
-            gl::Uniform1i(3, frame_count + 1);
+            gl::Uniform1i(3, frame_count);
         }
         for light in directional_lights.iter() {
             unsafe {
@@ -335,7 +320,7 @@ impl Renderer {
 
         self.point_shader.activate();
         unsafe {
-            gl::Uniform1i(5, frame_count + 2);
+            gl::Uniform1i(5, frame_count);
         };
         for light in point_lights.iter() {
             let &PointLight {
@@ -367,7 +352,7 @@ impl Renderer {
             let buffers = &(self.light_buffer.buffers);
             gl::BindTextures(1, buffers.len() as i32, &buffers[0]);
             gl::Uniform1i(1, self.res_factor);
-            gl::Uniform1i(2, frame_count + 3);
+            gl::Uniform1i(2, frame_count);
         }
         self.quad_mesh.draw();
         Shader::deactivate();
