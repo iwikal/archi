@@ -108,7 +108,9 @@ fn main() {
     let mut should_quit = false;
     use std::time::Instant;
     let mut previous_time = Instant::now();
-    let mut frame_count = 0;
+
+    use std::num::Wrapping;
+    let mut frame_count = Wrapping(0);
     let mut temporal_dither = true;
     while !should_quit {
         let now = Instant::now();
@@ -147,7 +149,7 @@ fn main() {
         camera.take_input(&event_pump, delta_seconds);
 
         renderer.render(
-            frame_count,
+            frame_count.0,
             &camera,
             &models,
             ambient_color,
@@ -156,7 +158,7 @@ fn main() {
         );
         window.gl_swap_window();
         previous_time = now;
-        if temporal_dither { frame_count = (frame_count + 1) % 16; }
+        if temporal_dither { frame_count += Wrapping(1); }
     }
     println!("Quit");
 }

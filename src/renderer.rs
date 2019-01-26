@@ -171,34 +171,34 @@ pub struct Renderer {
 }
 
 impl Renderer {
+    const NOISES: [&'static str; 16] = [
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_0.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_1.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_2.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_3.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_4.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_5.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_6.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_7.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_8.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_9.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_10.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_11.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_12.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_13.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_14.png",
+        "../assets/textures/blue-noise/64_64/LDR_RGB1_15.png",
+    ];
+
     pub fn new(width: i32, height: i32) -> Self {
         let mut dither_map = 0;
         unsafe {
             gl::GenTextures(1, &mut dither_map);
             gl::BindTexture(gl::TEXTURE_2D_ARRAY, dither_map);
 
-            let noises = [
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_0.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_1.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_2.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_3.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_4.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_5.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_6.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_7.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_8.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_9.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_10.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_11.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_12.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_13.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_14.png",
-                "../assets/textures/blue-noise/64_64/LDR_RGB1_15.png",
-            ];
-
             let width = 64;
             let height = 64;
-            let depth = noises.len() as i32;
+            let depth = Self::NOISES.len() as i32;
 
             gl::TexImage3D(
                 gl::TEXTURE_2D_ARRAY,
@@ -213,7 +213,7 @@ impl Renderer {
                 std::ptr::null()
             );
 
-            for (i, path) in noises.iter().enumerate() {
+            for (i, path) in Self::NOISES.iter().enumerate() {
                 use rgb::*;
                 let image = lodepng::decode32_file(path).unwrap();
                 let data = image.buffer.as_bytes();
@@ -274,6 +274,7 @@ impl Renderer {
         directional_lights: &[DirectionalLight],
         point_lights: &[PointLight],
     ) {
+        let frame_count = frame_count & (Self::NOISES.len() as i32 - 1);
         let projection = camera.projection();
         let view = camera.view();
         let view_projection = projection * view;
