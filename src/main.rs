@@ -1,5 +1,6 @@
 extern crate gl;
 extern crate glm;
+extern crate gltf;
 extern crate lodepng;
 extern crate num;
 extern crate rand;
@@ -111,6 +112,16 @@ fn main() {
             color: vec3(0.5, 0.5, 0.75) / 512.0,
         }]
     };
+
+    let gltf = gltf::Gltf::open(
+        "../../assets/models/glTF-Sample-Models/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf"
+    ).unwrap();
+
+    for scene in gltf.scenes() {
+        for node in scene.nodes() {
+            println!("{:#?}", node);
+        }
+    }
 
     let models = {
         use model::*;
