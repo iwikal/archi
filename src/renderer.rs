@@ -210,7 +210,7 @@ impl Renderer {
                 0,
                 gl::RGB,
                 gl::UNSIGNED_BYTE,
-                std::ptr::null()
+                std::ptr::null(),
             );
 
             for (i, path) in Self::NOISES.iter().enumerate() {
@@ -347,7 +347,12 @@ impl Renderer {
         self.post_buffer.bind();
         self.post_shader.activate();
         unsafe {
-            gl::Viewport(0, 0, self.width / self.res_factor, self.height / self.res_factor);
+            gl::Viewport(
+                0,
+                0,
+                self.width / self.res_factor,
+                self.height / self.res_factor,
+            );
             gl::Disable(gl::BLEND);
             gl::Clear(gl::COLOR_BUFFER_BIT);
             let buffers = &(self.light_buffer.buffers);

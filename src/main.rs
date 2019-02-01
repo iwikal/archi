@@ -1,11 +1,11 @@
 extern crate gl;
 extern crate glm;
+extern crate lodepng;
 extern crate num;
 extern crate rand;
+extern crate rgb;
 extern crate sdl2;
 extern crate tobj;
-extern crate lodepng;
-extern crate rgb;
 
 mod camera;
 mod glerror;
@@ -128,7 +128,9 @@ fn main() {
                             "Escape" => {
                                 should_quit = true;
                             }
-                            "F" => { temporal_dither = !temporal_dither; }
+                            "F" => {
+                                temporal_dither = !temporal_dither;
+                            }
                             _ => {}
                         }
                     }
@@ -136,10 +138,18 @@ fn main() {
                 Event::MouseWheel { y, .. } => {
                     renderer.res_factor = if y > 0 {
                         let f = renderer.res_factor * 2;
-                        if f > 32 { 32 } else { f }
+                        if f > 32 {
+                            32
+                        } else {
+                            f
+                        }
                     } else {
                         let f = renderer.res_factor / 2;
-                        if f < 1 { 1 } else { f }
+                        if f < 1 {
+                            1
+                        } else {
+                            f
+                        }
                     };
                 }
                 _ => {}
@@ -158,7 +168,9 @@ fn main() {
         );
         window.gl_swap_window();
         previous_time = now;
-        if temporal_dither { frame_count += Wrapping(1); }
+        if temporal_dither {
+            frame_count += Wrapping(1);
+        }
     }
     println!("Quit");
 }
