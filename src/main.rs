@@ -5,6 +5,8 @@ extern crate num;
 extern crate rand;
 extern crate rgb;
 extern crate sdl2;
+extern crate specs;
+extern crate specs_hierarchy;
 extern crate tobj;
 
 mod camera;
@@ -13,6 +15,7 @@ mod mesh;
 mod model;
 mod renderer;
 mod shader;
+mod world;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -95,6 +98,8 @@ fn main() {
             })
             .collect::<Vec<Model>>()
     };
+
+    world::load_world();
 
     unsafe {
         gl::Enable(gl::CULL_FACE);
