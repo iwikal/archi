@@ -158,6 +158,7 @@ pub struct Renderer {
     width: i32,
     height: i32,
     pub res_factor: i32,
+    pub color_depth: i32,
     g_buffer: Framebuffer,
     light_buffer: Framebuffer,
     post_buffer: Framebuffer,
@@ -248,6 +249,7 @@ impl Renderer {
             width,
             height,
             res_factor: 1,
+            color_depth: 256,
             g_buffer: {
                 let formats = [gl::RGB, gl::RGBA16F, gl::RGB16F];
 
@@ -359,6 +361,7 @@ impl Renderer {
             gl::BindTextures(1, buffers.len() as i32, &buffers[0]);
             gl::Uniform1i(1, self.res_factor);
             gl::Uniform1i(2, frame_count);
+            gl::Uniform1i(3, self.color_depth);
         }
         self.quad_mesh.draw();
         Shader::deactivate();

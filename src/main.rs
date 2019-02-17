@@ -33,7 +33,7 @@ fn main() {
 
     let mut renderer = renderer::Renderer::new(width as i32, height as i32);
 
-    let brightness = 1.0 / 512.0;
+    let brightness = 1.0 / 2048.0;
     let ambient_color = glm::vec3(brightness, brightness, brightness);
 
     let point_lights = {
@@ -41,34 +41,34 @@ fn main() {
         use renderer::PointLight as Light;
         [
             Light {
-                radius: 2.0,
+                radius: 4.0,
                 position: vec3(-1.3, 2.5, 0.),
-                color: vec3(0.5, 0.5, 0.4),
+                color: vec3(0.5, 0.5, 0.4) / 16.0,
             },
             Light {
-                radius: 2.0,
+                radius: 4.0,
                 position: vec3(0., 2.5, 0.),
-                color: vec3(0.5, 0.5, 0.4),
+                color: vec3(0.5, 0.5, 0.4) / 16.0,
             },
             Light {
-                radius: 2.0,
+                radius: 4.0,
                 position: vec3(1.3, 2.5, 0.),
-                color: vec3(0.5, 0.5, 0.4),
+                color: vec3(0.5, 0.5, 0.4) / 16.0,
             },
             Light {
-                radius: 2.0,
+                radius: 4.0,
                 position: vec3(0., -0.5, 2.),
-                color: vec3(0.5, 0.5, 1.),
+                color: vec3(0.5, 0.5, 1.) / 16.0,
             },
             Light {
-                radius: 2.0,
+                radius: 4.0,
                 position: vec3(0., -0.5, -2.),
-                color: vec3(0.5, 0.5, 1.),
+                color: vec3(0.5, 0.5, 1.) / 16.0,
             },
             Light {
-                radius: 2.0,
+                radius: 4.0,
                 position: vec3(3.5, 4.3, 1.),
-                color: vec3(1., 0., 0.),
+                color: vec3(1., 0., 0.) / 16.0,
             },
         ]
     };
@@ -78,7 +78,7 @@ fn main() {
         use renderer::DirectionalLight as Light;
         [Light {
             direction: vec3(-1., -1., -1.),
-            color: vec3(0.1, 0.1, 0.15),
+            color: vec3(0.5, 0.5, 0.75) / 512.0,
         }]
     };
 
@@ -135,6 +135,12 @@ fn main() {
                             }
                             "F" => {
                                 temporal_dither = !temporal_dither;
+                            }
+                            "Q" => {
+                                renderer.color_depth = 256;
+                            }
+                            "E" => {
+                                renderer.color_depth = 2;
                             }
                             _ => {}
                         }

@@ -6,12 +6,50 @@ layout (binding = 0) uniform sampler2DArray dither_map;
 layout (binding = 1) uniform sampler2D color_buffer;
 layout (location = 1) uniform int factor = 1;
 layout (location = 2) uniform int frame_count = 0;
+layout (location = 3) uniform int color_depth = 256;
 
 out vec4 FragColor;
 
+float gamma = 2.4;
+
+float to_srgb (float color) {
+  return pow(color, 1.0 / gamma);
+}
+
+vec3 to_srgb (vec3 color) {
+  return vec3(
+      to_srgb(color.r),
+      to_srgb(color.g),
+      to_srgb(color.b)
+      );
+}
+
+float to_linear (float color) {
+  return pow(color, gamma);
+}
+
+vec3 to_linear (vec3 color) {
+  return vec3(
+      to_linear(color.r),
+      to_linear(color.g),
+      to_linear(color.b)
+      );
+}
+
 vec3 dither () {
   vec2 dither_coord = gl_FragCoord.xy / textureSize(dither_map, 0).xy;
-  return texture(dither_map, vec3(dither_coord, frame_count)).xyz - 0.5;
+  vec3 value = texture(dither_map, vec3(dither_coord, frame_count)).xyz;
+  return value * 255 / 256;
+}
+
+vec3 quantize (vec3 color) {
+  return floor(color * color_depth) / (color_depth - 1);
+}
+
+vec3 downsample (vec3 color) {
+  int depth = color_depth - 1;
+  vec3 upscaled = depth * color;
+  return floor(upscaled + dither()) / depth;
 }
 
 void main () {
@@ -26,7 +64,9 @@ void main () {
     }
   }
   vec3 average_color = sum_color / (factor * factor);
-  int color_depth = 256;
-  vec3 rgb = round(average_color * color_depth + dither()) / color_depth;
-  FragColor = vec4(rgb, 1.0);
+  FragColor.rgb = average_color;
+  if (color_depth != 2) {
+    FragColor.rgb = to_srgb(FragColor.rgb);
+  };
+  FragColor.rgb = downsample(FragColor.rgb);
 }
