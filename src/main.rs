@@ -85,7 +85,7 @@ fn main() {
     let models = {
         use model::*;
         let meshes = model::from_obj(
-            "../../assets/models/spaceship/transport_shuttle.obj",
+            "../assets/models/spaceship/transport_shuttle.obj",
             1.0,
             true,
         );
