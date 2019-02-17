@@ -113,16 +113,6 @@ fn main() {
         }]
     };
 
-    let gltf = gltf::Gltf::open(
-        "../../assets/models/glTF-Sample-Models/2.0/TriangleWithoutIndices/glTF/TriangleWithoutIndices.gltf"
-    ).unwrap();
-
-    for scene in gltf.scenes() {
-        for node in scene.nodes() {
-            println!("{:#?}", node);
-        }
-    }
-
     let models = {
         use model::*;
         let meshes = model::from_obj("assets/models/spaceship/transport_shuttle.obj", 1.0, true);
@@ -136,7 +126,9 @@ fn main() {
             .collect::<Vec<Model>>()
     };
 
-    world::load_world();
+    world::load_world(
+        "../../assets/models/glTF-Sample-Models/2.0/SimpleMeshes/glTF/SimpleMeshes.gltf"
+    );
 
     unsafe {
         gl::Enable(gl::CULL_FACE);

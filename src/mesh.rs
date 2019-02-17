@@ -229,3 +229,8 @@ impl Mesh {
         (positions, indices)
     }
 }
+
+use specs::{Component, DenseVecStorage};
+impl Component for Mesh {
+    type Storage = DenseVecStorage<Self>;
+}
