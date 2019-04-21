@@ -19,8 +19,14 @@ mod world;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
+
     let video_system = sdl_context.video().unwrap();
     sdl_context.mouse().set_relative_mouse_mode(true);
+    let gl_attr = video_system.gl_attr();
+    gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
+    gl_attr.set_context_version(4, 3);
+    gl_attr.set_framebuffer_srgb_compatible(true);
+
     let window = video_system
         .window("archi", 800, 600)
         .fullscreen_desktop()
