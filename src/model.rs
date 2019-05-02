@@ -2,6 +2,7 @@ use camera::Camera;
 use gl::types::*;
 use glm::Mat4;
 use mesh::{Mesh, ModelVertex};
+use std::ffi::OsStr;
 use std::path::Path;
 
 #[derive(Debug, Copy, Clone)]
@@ -31,10 +32,12 @@ impl Model {
     }
 }
 
-pub fn from_obj(path: &str, scale: f32, reverse_winding: bool) -> Vec<Mesh> {
+pub fn from_obj<S: AsRef<OsStr> + ?Sized>(path: &S, scale: f32, reverse_winding: bool) -> Vec<Mesh> {
     use mesh;
     use tobj::*;
-    let (models, _materials) = load_obj(Path::new(path)).unwrap();
+    let arg = std::env::args_os().nth(0).unwrap();
+    let path = Path::join(Path::new(&arg).parent().unwrap(), Path::new(path));
+    let (models, _materials) = load_obj(&path).unwrap();
     models
         .iter()
         .map(|Model { mesh, .. }| {

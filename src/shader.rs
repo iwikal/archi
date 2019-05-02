@@ -124,7 +124,6 @@ impl Shader {
 
     #[allow(dead_code)]
     pub fn get_location(&self, name: &str) -> GLint {
-        use std::ffi::CString;
         let location = {
             let c_name = CString::new(name).expect("uniform name is not a valid c string");
             unsafe { gl::GetUniformLocation(self.name, c_name.as_ptr() as *const GLchar) }

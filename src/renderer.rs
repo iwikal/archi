@@ -5,6 +5,7 @@ use glm::Vec3;
 use mesh::Mesh;
 use model::Model;
 use shader::Shader;
+use std::path::Path;
 
 pub struct DirectionalLight {
     pub direction: Vec3,
@@ -173,22 +174,22 @@ pub struct Renderer {
 
 impl Renderer {
     const NOISES: [&'static str; 16] = [
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_0.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_1.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_2.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_3.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_4.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_5.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_6.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_7.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_8.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_9.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_10.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_11.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_12.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_13.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_14.png",
-        "../assets/textures/blue-noise/64_64/LDR_RGB1_15.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_0.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_1.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_2.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_3.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_4.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_5.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_6.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_7.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_8.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_9.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_10.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_11.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_12.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_13.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_14.png",
+        "assets/textures/blue-noise/64_64/LDR_RGB1_15.png",
     ];
 
     pub fn new(width: i32, height: i32) -> Self {
@@ -215,6 +216,8 @@ impl Renderer {
             );
 
             for (i, path) in Self::NOISES.iter().enumerate() {
+                let arg = std::env::args_os().nth(0).unwrap();
+                let path = Path::join(Path::new(&arg).parent().unwrap(), path);
                 use rgb::*;
                 let image = lodepng::decode32_file(path).unwrap();
                 let data = image.buffer.as_bytes();
