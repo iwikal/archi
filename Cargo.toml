@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["iwikal <e.joel.nordstrom@gmail.com>"]
 
 [dependencies]
-sdl2 = "*"
 gl = "*"
 glm = "*"
 num = "*"
@@ -14,3 +13,7 @@ lodepng = "2.0.0"
 rgb = "0.8"
 specs = "0.14.0"
 specs-hierarchy = "0.3.0"
+
+[dependencies.sdl2]
+version = "0.32"
+features = ["bundled"]
