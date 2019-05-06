@@ -26,6 +26,9 @@ fn main() {
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(4, 3);
     gl_attr.set_framebuffer_srgb_compatible(true);
+    gl_attr.set_context_flags().debug().set();
+
+    dbg!(video_system.current_video_driver());
 
     let window = video_system
         .window("archi", 800, 600)
@@ -36,6 +39,27 @@ fn main() {
     let (width, height) = window.size();
     let _gl_context = window.gl_create_context().unwrap();
     gl::load_with(|s| video_system.gl_get_proc_address(s) as *const _);
+
+    {
+        use glerror::*;
+        debug_messages(GlDebugSeverity::Low);
+    }
+
+    unsafe {
+        use std::ffi::*;
+        eprintln!(
+            "GL_VENDOR:	{:?}",
+            CStr::from_ptr(gl::GetString(gl::VENDOR) as *const i8)
+        );
+        eprintln!(
+            "GL_RENDERER:	{:?}",
+            CStr::from_ptr(gl::GetString(gl::RENDERER) as *const i8)
+        );
+        eprintln!(
+            "GL_VERSION:	{:?}",
+            CStr::from_ptr(gl::GetString(gl::VERSION) as *const i8)
+        );
+    }
 
     let mut renderer = renderer::Renderer::new(width as i32, height as i32);
 
@@ -90,11 +114,7 @@ fn main() {
 
     let models = {
         use model::*;
-        let meshes = model::from_obj(
-            "assets/models/spaceship/transport_shuttle.obj",
-            1.0,
-            true,
-        );
+        let meshes = model::from_obj("assets/models/spaceship/transport_shuttle.obj", 1.0, true);
         meshes
             .into_iter()
             .map(|mesh| {
