@@ -127,7 +127,7 @@ fn main() {
     };
 
     world::load_world(
-        "../../assets/models/glTF-Sample-Models/2.0/SimpleMeshes/glTF/SimpleMeshes.gltf"
+        "assets/models/spaceship/transport_shuttle.glb",
     );
 
     unsafe {
