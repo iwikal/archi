@@ -349,7 +349,12 @@ impl Renderer {
             self.point_mesh.draw();
         }
 
-        self.post_buffer.bind();
+        if self.res_factor == 1 {
+            Framebuffer::unbind();
+        } else {
+            self.post_buffer.bind();
+        }
+
         self.post_shader.activate();
         unsafe {
             gl::Viewport(
@@ -369,23 +374,25 @@ impl Renderer {
         self.quad_mesh.draw();
         Shader::deactivate();
 
-        Framebuffer::unbind();
-        unsafe {
-            gl::Viewport(0, 0, self.width, self.height);
-            gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.post_buffer.name);
-            gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, 0);
-            gl::BlitFramebuffer(
-                0,
-                0,
-                self.width / self.res_factor,
-                self.height / self.res_factor,
-                0,
-                0,
-                self.width,
-                self.height,
-                gl::COLOR_BUFFER_BIT,
-                gl::NEAREST,
-            );
+        if self.res_factor != 1 {
+            Framebuffer::unbind();
+            unsafe {
+                gl::Viewport(0, 0, self.width, self.height);
+                gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.post_buffer.name);
+                gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, 0);
+                gl::BlitFramebuffer(
+                    0,
+                    0,
+                    self.width / self.res_factor,
+                    self.height / self.res_factor,
+                    0,
+                    0,
+                    self.width,
+                    self.height,
+                    gl::COLOR_BUFFER_BIT,
+                    gl::NEAREST,
+                );
+            }
         }
     }
 }
