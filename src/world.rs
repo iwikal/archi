@@ -118,7 +118,7 @@ impl<'a> System<'a> for RenderSystem {
     }
 }
 
-pub fn load_world(path: &str) -> World {
+pub fn load_world(path: impl AsRef<std::path::Path>) -> World {
     use specs_hierarchy::HierarchySystem;
     let mut world = World::new();
     world.register::<Transform>();

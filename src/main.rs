@@ -19,6 +19,13 @@ mod shader;
 mod world;
 
 fn main() {
+    let mut args = std::env::args();
+    let model_path = {
+        let _exe_path = args.next().expect("Must have argv[0]");
+        args.next().unwrap_or(
+            "assets/models/2.0/FlightHelmet/glTF/FlightHelmet.gltf".to_owned()
+        )
+    };
     let sdl_context = sdl2::init().unwrap();
 
     let video_system = sdl_context.video().unwrap();
@@ -64,70 +71,8 @@ fn main() {
 
     let mut renderer = renderer::Renderer::new(width as i32, height as i32);
 
-    let brightness = 1.0 / 2048.0;
-    let ambient_color = glm::vec3(brightness, brightness, brightness);
-
-    let point_lights = {
-        use glm::vec3;
-        use renderer::PointLight as Light;
-        [
-            Light {
-                radius: 4.0,
-                position: vec3(-1.3, 2.5, 0.),
-                color: vec3(0.5, 0.5, 0.4) / 16.0,
-            },
-            Light {
-                radius: 4.0,
-                position: vec3(0., 2.5, 0.),
-                color: vec3(0.5, 0.5, 0.4) / 16.0,
-            },
-            Light {
-                radius: 4.0,
-                position: vec3(1.3, 2.5, 0.),
-                color: vec3(0.5, 0.5, 0.4) / 16.0,
-            },
-            Light {
-                radius: 4.0,
-                position: vec3(0., -0.5, 2.),
-                color: vec3(0.5, 0.5, 1.) / 16.0,
-            },
-            Light {
-                radius: 4.0,
-                position: vec3(0., -0.5, -2.),
-                color: vec3(0.5, 0.5, 1.) / 16.0,
-            },
-            Light {
-                radius: 4.0,
-                position: vec3(3.5, 4.3, 1.),
-                color: vec3(1., 0., 0.) / 16.0,
-            },
-        ]
-    };
-
-    let dir_lights = {
-        use glm::vec3;
-        use renderer::DirectionalLight as Light;
-        [Light {
-            direction: vec3(-1., -1., -1.),
-            color: vec3(0.5, 0.5, 0.75) / 512.0,
-        }]
-    };
-
-    let models = {
-        use model::*;
-        let meshes = model::from_obj("assets/models/spaceship/transport_shuttle.obj", 1.0, true);
-        meshes
-            .into_iter()
-            .map(|mesh| {
-                let mesh = Box::new(mesh);
-                let mesh = Box::leak(mesh);
-                Model::new(mesh, num::one())
-            })
-            .collect::<Vec<Model>>()
-    };
-
     world::load_world(
-        "assets/models/spaceship/transport_shuttle.glb",
+        model_path,
     );
 
     unsafe {
@@ -198,14 +143,6 @@ fn main() {
 
         camera.take_input(&event_pump, delta_seconds);
 
-        renderer.render(
-            frame_count.0,
-            &camera,
-            &models,
-            ambient_color,
-            &dir_lights,
-            &point_lights,
-        );
         window.gl_swap_window();
         previous_time = now;
         if temporal_dither {
