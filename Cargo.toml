@@ -12,6 +12,9 @@ rand = "0.6"
 tobj = "0.1.6"
 lodepng = "2.0.0"
 rgb = "0.8"
-specs = "0.14.0"
-specs-hierarchy = "0.3.0"
-gltf = "0.11"
+specs = { version = "0.15", features = ["specs-derive"] }
+specs-hierarchy = "0.4"
+gltf = "0.12"
+
+[profile.dev]
+opt-level = 2

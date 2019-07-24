@@ -1,5 +1,5 @@
 use glm::Mat4;
-use specs::{Component, DenseVecStorage, Entity, FlaggedStorage, VecStorage, World};
+use specs::{Component, DenseVecStorage, Entity, FlaggedStorage, VecStorage, World, WorldExt};
 use specs_hierarchy::Parent;
 
 #[derive(Debug)]
@@ -127,7 +127,7 @@ pub fn load_world(path: impl AsRef<std::path::Path>) -> World {
         .with(HierarchySystem::<Child>::new(), "hierarchy_system", &[])
         .with(RenderSystem {}, "render_system", &["hierarchy_system"])
         .build();
-    dispatcher.setup(&mut world.res);
+    dispatcher.setup(&mut world);
 
     let (doc, buffers, _) = gltf::import(path).unwrap();
 
@@ -138,7 +138,7 @@ pub fn load_world(path: impl AsRef<std::path::Path>) -> World {
         add_node(None, node, &mut world, &imp);
     }
 
-    dispatcher.dispatch(&mut world.res);
+    dispatcher.dispatch(&mut world);
 
     world
 }
