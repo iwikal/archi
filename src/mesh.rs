@@ -1,5 +1,3 @@
-extern crate glm;
-
 use gl::types::*;
 use std::ptr;
 

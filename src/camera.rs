@@ -1,7 +1,3 @@
-extern crate glm;
-extern crate num;
-extern crate sdl2;
-
 pub struct Camera {
     position: glm::Vec3,
     pitch: f32,
