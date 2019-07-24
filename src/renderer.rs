@@ -297,7 +297,16 @@ impl Renderer {
         point_lights: &[PointLight],
     ) {
         let frame_count = frame_count & (Self::NOISES.len() as i32 - 1);
-        let projection = camera.projection();
+        let projection = {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let mut projection = camera.projection();
+            let width = self.width / self.res_factor;
+            projection[2][0] += (rng.gen::<f32>() - 0.5) / width as f32;
+            let height = self.height / self.res_factor;
+            projection[2][1] += (rng.gen::<f32>() - 0.5) / height as f32;
+            projection
+        };
         let view = camera.view();
         let view_projection = projection * view;
 
