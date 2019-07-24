@@ -48,7 +48,11 @@ impl Camera {
             self.yaw += (state.x() as f32) * scale;
             self.pitch += (state.y() as f32) * scale;
 
-            let ori = glm::ext::rotate(&num::one(), self.pitch, glm::vec3(1., 0., 0.));
+            let ori = glm::ext::rotate(
+                &num::one(),
+                self.pitch,
+                glm::vec3(1., 0., 0.),
+            );
             let ori = glm::ext::rotate(&ori, self.yaw, glm::vec3(0., 1., 0.));
             self.orientation = ori;
         }

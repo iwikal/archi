@@ -25,14 +25,28 @@ impl Model {
         let mvp_matrix = projection * view * self.transform;
 
         unsafe {
-            gl::UniformMatrix4fv(MVP_LOCATION, 1, gl::FALSE, &(mvp_matrix[0][0]));
-            gl::UniformMatrix4fv(MODEL_LOCATION, 1, gl::FALSE, &(self.transform[0][0]));
+            gl::UniformMatrix4fv(
+                MVP_LOCATION,
+                1,
+                gl::FALSE,
+                &(mvp_matrix[0][0]),
+            );
+            gl::UniformMatrix4fv(
+                MODEL_LOCATION,
+                1,
+                gl::FALSE,
+                &(self.transform[0][0]),
+            );
             self.mesh.draw();
         }
     }
 }
 
-pub fn from_obj<S: AsRef<OsStr> + ?Sized>(path: &S, scale: f32, reverse_winding: bool) -> Vec<Mesh> {
+pub fn from_obj<S: AsRef<OsStr> + ?Sized>(
+    path: &S,
+    scale: f32,
+    reverse_winding: bool,
+) -> Vec<Mesh> {
     use mesh;
     use tobj::*;
     let arg = std::env::args_os().nth(0).unwrap();
@@ -46,13 +60,14 @@ pub fn from_obj<S: AsRef<OsStr> + ?Sized>(path: &S, scale: f32, reverse_winding:
                 .as_slice()
                 .chunks_exact(3)
                 .map(|chunk| glm::vec3(chunk[0], chunk[1], chunk[2]));
-            let normals = mesh.normals.as_slice().chunks_exact(3).map(|chunk| {
-                if reverse_winding {
-                    glm::vec3(chunk[0], chunk[1], chunk[2])
-                } else {
-                    glm::vec3(chunk[2], chunk[1], chunk[0])
-                }
-            });
+            let normals =
+                mesh.normals.as_slice().chunks_exact(3).map(|chunk| {
+                    if reverse_winding {
+                        glm::vec3(chunk[0], chunk[1], chunk[2])
+                    } else {
+                        glm::vec3(chunk[2], chunk[1], chunk[0])
+                    }
+                });
             let vertices: Vec<ModelVertex> = positions
                 .zip(normals)
                 .map(|(position, normal)| ModelVertex {

@@ -95,8 +95,16 @@ impl Framebuffer {
                 gl::UNSIGNED_BYTE,
                 std::ptr::null(),
             );
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as GLint);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MIN_FILTER,
+                gl::LINEAR as GLint,
+            );
+            gl::TexParameteri(
+                gl::TEXTURE_2D,
+                gl::TEXTURE_MAG_FILTER,
+                gl::LINEAR as GLint,
+            );
             gl::TexParameteri(
                 gl::TEXTURE_2D,
                 gl::TEXTURE_WRAP_S,
@@ -108,7 +116,12 @@ impl Framebuffer {
                 gl::CLAMP_TO_BORDER as GLint,
             );
 
-            gl::FramebufferTexture(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, depth_buffer, 0);
+            gl::FramebufferTexture(
+                gl::FRAMEBUFFER,
+                gl::DEPTH_ATTACHMENT,
+                depth_buffer,
+                0,
+            );
 
             let attachments = [
                 gl::COLOR_ATTACHMENT0,
@@ -117,7 +130,9 @@ impl Framebuffer {
             ];
             gl::DrawBuffers(3, &attachments[0]);
 
-            if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
+            if gl::CheckFramebufferStatus(gl::FRAMEBUFFER)
+                != gl::FRAMEBUFFER_COMPLETE
+            {
                 panic!("framebuffer not complete");
             }
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
@@ -336,7 +351,8 @@ impl Renderer {
             } = light;
             let model = num::one();
             let model = glm::ext::translate(&model, position);
-            let model = glm::ext::scale(&model, glm::vec3(radius, radius, radius));
+            let model =
+                glm::ext::scale(&model, glm::vec3(radius, radius, radius));
             let mvp = view_projection * model;
 
             unsafe {
@@ -378,7 +394,10 @@ impl Renderer {
             Framebuffer::unbind();
             unsafe {
                 gl::Viewport(0, 0, self.width, self.height);
-                gl::BindFramebuffer(gl::READ_FRAMEBUFFER, self.post_buffer.name);
+                gl::BindFramebuffer(
+                    gl::READ_FRAMEBUFFER,
+                    self.post_buffer.name,
+                );
                 gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, 0);
                 gl::BlitFramebuffer(
                     0,

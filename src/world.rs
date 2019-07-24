@@ -1,5 +1,8 @@
 use glm::Mat4;
-use specs::{Component, DenseVecStorage, Entity, FlaggedStorage, VecStorage, World, WorldExt};
+use specs::{
+    Component, DenseVecStorage, Entity, FlaggedStorage, VecStorage, World,
+    WorldExt,
+};
 use specs_hierarchy::Parent;
 
 #[derive(Debug)]
@@ -44,7 +47,12 @@ struct ImportData {
 
 use mesh::Mesh;
 use specs::{Builder, DispatcherBuilder};
-fn add_node(parent: Option<Entity>, node: gltf::Node, world: &mut World, imp: &ImportData) {
+fn add_node(
+    parent: Option<Entity>,
+    node: gltf::Node,
+    world: &mut World,
+    imp: &ImportData,
+) {
     let trans = {
         let arr = node.transform().matrix();
         glm::Mat4::new(
@@ -101,12 +109,11 @@ fn add_node(parent: Option<Entity>, node: gltf::Node, world: &mut World, imp: &I
     }
 }
 
-struct RenderSystem { }
+struct RenderSystem {}
 
-use specs::{System, ReadStorage};
+use specs::{ReadStorage, System};
 impl<'a> System<'a> for RenderSystem {
-    type SystemData = (ReadStorage<'a, Transform>,
-                       ReadStorage<'a, Mesh>);
+    type SystemData = (ReadStorage<'a, Transform>, ReadStorage<'a, Mesh>);
 
     fn run(&mut self, (transforms, meshes): Self::SystemData) {
         use specs::Join;

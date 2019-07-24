@@ -152,7 +152,12 @@ impl Mesh {
     pub fn draw(&self) {
         unsafe {
             gl::BindVertexArray(self.vao);
-            gl::DrawElements(gl::TRIANGLES, self.elements, gl::UNSIGNED_INT, ptr::null());
+            gl::DrawElements(
+                gl::TRIANGLES,
+                self.elements,
+                gl::UNSIGNED_INT,
+                ptr::null(),
+            );
             gl::BindVertexArray(0);
         }
     }
@@ -160,20 +165,23 @@ impl Mesh {
     #[allow(dead_code)]
     pub fn cube() -> (Vec<glm::Vec3>, Vec<GLuint>) {
         use glm::vec3;
-        let vector = |arr: &[i32]| vec3(arr[0] as f32, arr[1] as f32, arr[2] as f32);
+        let vector =
+            |arr: &[i32]| vec3(arr[0] as f32, arr[1] as f32, arr[2] as f32);
         let mut positions = Vec::new();
         let mut indices = Vec::new();
         for face in 0..6 {
             let direction = if face < 3 { -1 } else { 1 };
             let plane = face % 3;
-            positions.extend([[0, 0], [1, 0], [1, 1], [0, 1]].iter().map(|[a, b]| {
-                let position = {
-                    let mut corner = [(direction + 1) / 2, *a, *b];
-                    corner.rotate_right(plane);
-                    vector(&corner) - 0.5
-                };
-                position
-            }));
+            positions.extend([[0, 0], [1, 0], [1, 1], [0, 1]].iter().map(
+                |[a, b]| {
+                    let position = {
+                        let mut corner = [(direction + 1) / 2, *a, *b];
+                        corner.rotate_right(plane);
+                        vector(&corner) - 0.5
+                    };
+                    position
+                },
+            ));
             indices.extend(
                 {
                     let mut new = [0, 1, 2, 2, 3, 0];
@@ -222,9 +230,9 @@ impl Mesh {
         }
 
         let indices = vec![
-            0, 1, 2, 0, 2, 8, 0, 8, 4, 0, 4, 6, 0, 6, 1, 9, 7, 5, 9, 3, 7, 9, 10, 3, 9, 11, 10, 9,
-            5, 11, 1, 7, 2, 2, 3, 8, 8, 10, 4, 4, 11, 6, 6, 5, 1, 7, 1, 5, 3, 2, 7, 10, 8, 3, 11,
-            4, 10, 5, 6, 11,
+            0, 1, 2, 0, 2, 8, 0, 8, 4, 0, 4, 6, 0, 6, 1, 9, 7, 5, 9, 3, 7, 9,
+            10, 3, 9, 11, 10, 9, 5, 11, 1, 7, 2, 2, 3, 8, 8, 10, 4, 4, 11, 6,
+            6, 5, 1, 7, 1, 5, 3, 2, 7, 10, 8, 3, 11, 4, 10, 5, 6, 11,
         ];
         (positions, indices)
     }

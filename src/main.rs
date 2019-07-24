@@ -23,7 +23,7 @@ fn main() {
     let model_path = {
         let _exe_path = args.next().expect("Must have argv[0]");
         args.next().unwrap_or(
-            "assets/models/2.0/FlightHelmet/glTF/FlightHelmet.gltf".to_owned()
+            "assets/models/2.0/FlightHelmet/glTF/FlightHelmet.gltf".to_owned(),
         )
     };
     let sdl_context = sdl2::init().unwrap();
@@ -71,9 +71,7 @@ fn main() {
 
     let mut renderer = renderer::Renderer::new(width as i32, height as i32);
 
-    world::load_world(
-        model_path,
-    );
+    world::load_world(model_path);
 
     unsafe {
         gl::Enable(gl::CULL_FACE);
@@ -81,7 +79,8 @@ fn main() {
         gl::BlendFunc(gl::ONE, gl::ONE);
     }
 
-    let mut camera = camera::Camera::persp(width as f32, height as f32, 0.1, 100.0);
+    let mut camera =
+        camera::Camera::persp(width as f32, height as f32, 0.1, 100.0);
 
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut should_quit = false;

@@ -28,7 +28,12 @@ impl ShaderUnit {
             if len > 0 {
                 let mut buf = Vec::with_capacity(len as usize);
                 buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-                gl::GetShaderInfoLog(name, len, ptr::null_mut(), buf.as_mut_ptr() as *mut GLchar);
+                gl::GetShaderInfoLog(
+                    name,
+                    len,
+                    ptr::null_mut(),
+                    buf.as_mut_ptr() as *mut GLchar,
+                );
                 println!(
                     "{} shader info:\n{}",
                     typestr,
@@ -125,8 +130,14 @@ impl Shader {
     #[allow(dead_code)]
     pub fn get_location(&self, name: &str) -> GLint {
         let location = {
-            let c_name = CString::new(name).expect("uniform name is not a valid c string");
-            unsafe { gl::GetUniformLocation(self.name, c_name.as_ptr() as *const GLchar) }
+            let c_name = CString::new(name)
+                .expect("uniform name is not a valid c string");
+            unsafe {
+                gl::GetUniformLocation(
+                    self.name,
+                    c_name.as_ptr() as *const GLchar,
+                )
+            }
         };
 
         if location == -1 {

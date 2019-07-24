@@ -91,7 +91,9 @@ extern "system" fn message_callback(
     let fallback;
     let gltype = match gltype {
         gl::DEBUG_TYPE_ERROR => "GL_DEBUG_TYPE_ERROR",
-        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => "GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR",
+        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => {
+            "GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR"
+        }
         gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => "GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR",
         gl::DEBUG_TYPE_PORTABILITY => "GL_DEBUG_TYPE_PORTABILITY",
         gl::DEBUG_TYPE_PERFORMANCE => "GL_DEBUG_TYPE_PERFORMANCE",
@@ -121,7 +123,10 @@ extern "system" fn message_callback(
         if length < 0 {
             CStr::from_ptr(message)
         } else {
-            let slice = std::slice::from_raw_parts(message as *const u8, length as usize);
+            let slice = std::slice::from_raw_parts(
+                message as *const u8,
+                length as usize,
+            );
             owned_string = std::ffi::CString::new(slice).unwrap();
             &owned_string
         }
@@ -136,6 +141,9 @@ extern "system" fn message_callback(
 pub fn debug_messages(minimum_severity: GlDebugSeverity) {
     unsafe {
         let user_param = Box::leak(Box::new(UserParam { minimum_severity }));
-        gl::DebugMessageCallback(message_callback, user_param as *const _ as *const _);
+        gl::DebugMessageCallback(
+            message_callback,
+            user_param as *const _ as *const _,
+        );
     }
 }
