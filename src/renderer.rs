@@ -2,8 +2,8 @@ use camera::Camera;
 use gl::types::*;
 use glerror;
 use glm::Vec3;
+use material::Material;
 use mesh::Mesh;
-use model::Model;
 use shader::Shader;
 use std::path::Path;
 
@@ -175,6 +175,7 @@ pub struct Renderer {
     height: i32,
     pub res_factor: i32,
     pub color_depth: i32,
+    pub temporal_dither: bool,
     g_buffer: Framebuffer,
     light_buffer: Framebuffer,
     post_buffer: Framebuffer,
@@ -268,6 +269,7 @@ impl Renderer {
             height,
             res_factor: 1,
             color_depth: 256,
+            temporal_dither: true,
             g_buffer: {
                 let formats = [gl::RGB, gl::RGBA16F, gl::RGB16F];
 
@@ -285,11 +287,11 @@ impl Renderer {
         }
     }
 
-    pub fn render(
+    pub fn render<'a, 'b, 'c>(
         &self,
         frame_count: i32,
         camera: &Camera,
-        models: &[Model],
+        models: impl Iterator<Item = (&'a glm::Mat4, &'b Mesh, &'c Material)>,
         ambient: glm::Vec3,
         directional_lights: &[DirectionalLight],
         point_lights: &[PointLight],
@@ -307,8 +309,30 @@ impl Renderer {
             gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         };
-        for m in models.iter() {
-            m.render(&camera);
+
+        for (transform, mesh, material) in models {
+            let mvp_matrix = view_projection * *transform;
+
+            static MVP_LOCATION: GLint = 3;
+            static MODEL_LOCATION: GLint = 4;
+
+            unsafe {
+                gl::BindTexture(gl::TEXTURE_2D, material.diffuse_texture);
+                gl::UniformMatrix4fv(
+                    MVP_LOCATION,
+                    1,
+                    gl::FALSE,
+                    &(mvp_matrix[0][0]),
+                );
+                gl::UniformMatrix4fv(
+                    MODEL_LOCATION,
+                    1,
+                    gl::FALSE,
+                    &(transform[0][0]),
+                );
+            }
+
+            mesh.draw();
         }
         self.light_buffer.bind();
 

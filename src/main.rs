@@ -12,11 +12,15 @@ extern crate tobj;
 
 mod camera;
 mod glerror;
+mod material;
 mod mesh;
-mod model;
 mod renderer;
 mod shader;
 mod world;
+
+use camera::Camera;
+use renderer::Renderer;
+use specs::prelude::*;
 
 fn main() {
     let mut args = std::env::args();
@@ -69,9 +73,7 @@ fn main() {
         );
     }
 
-    let mut renderer = renderer::Renderer::new(width as i32, height as i32);
-
-    world::load_world(model_path);
+    let renderer = renderer::Renderer::new(width as i32, height as i32);
 
     unsafe {
         gl::Enable(gl::CULL_FACE);
@@ -79,17 +81,16 @@ fn main() {
         gl::BlendFunc(gl::ONE, gl::ONE);
     }
 
-    let mut camera =
-        camera::Camera::persp(width as f32, height as f32, 0.1, 100.0);
+    let camera = Camera::persp(width as f32, height as f32, 0.1, 100.0);
+
+    let (world, mut dispatcher) =
+        world::load_world(model_path, renderer, camera);
 
     let mut event_pump = sdl_context.event_pump().unwrap();
     let mut should_quit = false;
     use std::time::Instant;
     let mut previous_time = Instant::now();
 
-    use std::num::Wrapping;
-    let mut frame_count = Wrapping(0);
-    let mut temporal_dither = true;
     while !should_quit {
         let now = Instant::now();
         let delta_t = now.duration_since(previous_time);
@@ -107,19 +108,27 @@ fn main() {
                                 should_quit = true;
                             }
                             "F" => {
-                                temporal_dither = !temporal_dither;
+                                let mut renderer =
+                                    world.write_resource::<Renderer>();
+                                renderer.temporal_dither =
+                                    !renderer.temporal_dither;
                             }
                             "Q" => {
-                                renderer.color_depth = 256;
+                                world
+                                    .write_resource::<Renderer>()
+                                    .color_depth = 256;
                             }
                             "E" => {
-                                renderer.color_depth = 2;
+                                world
+                                    .write_resource::<Renderer>()
+                                    .color_depth = 2;
                             }
                             _ => {}
                         }
                     }
                 }
                 Event::MouseWheel { y, .. } => {
+                    let mut renderer = world.write_resource::<Renderer>();
                     renderer.res_factor = if y > 0 {
                         let f = renderer.res_factor * 2;
                         if f > 32 {
@@ -136,17 +145,18 @@ fn main() {
                         }
                     };
                 }
+
                 _ => {}
             }
         }
+        world
+            .write_resource::<Camera>()
+            .take_input(&event_pump, delta_seconds);
 
-        camera.take_input(&event_pump, delta_seconds);
+        dispatcher.dispatch_seq(&world);
 
         window.gl_swap_window();
         previous_time = now;
-        if temporal_dither {
-            frame_count += Wrapping(1);
-        }
     }
-    println!("Quit");
+    eprintln!("Quit");
 }
