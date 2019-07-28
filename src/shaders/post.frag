@@ -10,7 +10,7 @@ layout (location = 3) uniform int color_depth = 256;
 
 out vec4 FragColor;
 
-float gamma = 2.4;
+float gamma = 2.2;
 
 float to_srgb (float color) {
   return pow(color, 1.0 / gamma);

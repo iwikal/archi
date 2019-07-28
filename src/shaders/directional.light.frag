@@ -20,8 +20,9 @@ vec3 dither () {
 }
 
 void main () {
+  vec3 direction = normalize(light_dir);
   vec3 color = texture(color_buffer, uv).xyz;
   vec3 normal = texture(normal_buffer, uv).xyz;
-  float diff = max(dot(normal, -light_dir), 0.0);
+  float diff = max(dot(normal, -direction), 0.0);
   FragColor = vec4(color * light_color * diff + dither() / 256, 1);
 }

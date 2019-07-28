@@ -326,7 +326,11 @@ impl Renderer {
             static MODEL_LOCATION: GLint = 4;
 
             unsafe {
-                gl::BindTexture(gl::TEXTURE_2D, material.diffuse_texture);
+                let textures = [
+                    material.diffuse_texture,
+                    material.normal_texture,
+                ];
+                gl::BindTextures(0, textures.len() as i32, &textures[0]);
                 gl::UniformMatrix4fv(
                     MVP_LOCATION,
                     1,

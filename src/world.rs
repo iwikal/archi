@@ -118,6 +118,13 @@ fn add_node(
                             primitive.index(),
                         );
                     });
+                    let tangents = reader.read_tangents().unwrap_or_else(|| {
+                        panic!(
+                            "No tangents (mesh: {}, primitive: {})",
+                            mesh.index(),
+                            primitive.index(),
+                        );
+                    });
                     let mut source_uvs = reader
                         .read_tex_coords(uv_set)
                         .map(|uvs| uvs.into_f32());
@@ -127,11 +134,13 @@ fn add_node(
                     });
                     positions
                         .zip(normals)
+                        .zip(tangents)
                         .zip(uvs)
-                        .map(|((pos, norm), uv)| ModelVertex {
-                            position: *glm::Vector3::from_array(&pos),
-                            normal: *glm::Vector3::from_array(&norm),
-                            uv: *glm::Vector2::from_array(&uv),
+                        .map(|(((pos, norm), tan), uv)| ModelVertex {
+                            position: *glm::Vec3::from_array(&pos),
+                            normal: *glm::Vec3::from_array(&norm),
+                            tangent: glm::vec3(tan[0], tan[1], tan[2]),
+                            uv: *glm::Vec2::from_array(&uv),
                         })
                         .collect::<Vec<_>>()
                 };
@@ -201,8 +210,10 @@ impl<'a> System<'a> for RenderSystem {
             |(transform, mesh, material)| (&transform.global, mesh, material),
         );
 
-        let brightness = 1.0; // FIXME 1.0 / 2048.0;
-        let ambient_color = glm::vec3(brightness, brightness, brightness);
+        let ambient_color = {
+            let brightness = 1.0 / 1024.0;
+            glm::vec3(brightness, brightness, brightness)
+        };
 
         let point_lights = {
             use glm::vec3;
@@ -245,11 +256,16 @@ impl<'a> System<'a> for RenderSystem {
         let dir_lights = {
             use glm::vec3;
             use renderer::DirectionalLight as Light;
-            [Light {
-                direction: vec3(-1., -1., -1.),
-                color: vec3(0.5, 0.5, 0.75) / 512.0,
-            }];
-            []
+            [
+                Light {
+                    direction: vec3(-1., -1., 1.),
+                    color: vec3(0.66, 0.66, 1.0) / 16.0,
+                },
+                Light {
+                    direction: vec3(10., 0.5, -1.),
+                    color: vec3(1.0, 1.0, 0.5) / 4.0,
+                },
+            ]
         };
 
         renderer.render(

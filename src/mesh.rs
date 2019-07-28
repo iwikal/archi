@@ -15,6 +15,7 @@ pub trait Vertex {
 pub struct ModelVertex {
     pub position: glm::Vec3,
     pub normal: glm::Vec3,
+    pub tangent: glm::Vec3,
     pub uv: glm::Vec2,
 }
 
@@ -41,6 +42,16 @@ impl Vertex for ModelVertex {
             offset_of!(Self, normal) as *const _,
         );
 
+        gl::EnableVertexAttribArray(TANGENT_LOCATION);
+        gl::VertexAttribPointer(
+            TANGENT_LOCATION,
+            3,
+            gl::FLOAT,
+            gl::FALSE as GLboolean,
+            size_of::<Self>() as GLsizei,
+            offset_of!(Self, tangent) as *const _,
+        );
+
         gl::EnableVertexAttribArray(UV_LOCATION);
         gl::VertexAttribPointer(
             UV_LOCATION,
@@ -61,7 +72,8 @@ pub struct Mesh {
 
 static POSITION_LOCATION: GLuint = 0;
 static NORMAL_LOCATION: GLuint = 1;
-static UV_LOCATION: GLuint = 2;
+static TANGENT_LOCATION: GLuint = 2;
+static UV_LOCATION: GLuint = 3;
 
 struct LightVertex {
     position: glm::Vec3,
