@@ -5,7 +5,7 @@ use luminance::{
     pixel::Floating,
     render_state::RenderState,
     shader::program::{Program, Uniform},
-    tess::{Mode, Tess, TessBuilder},
+    tess::Tess,
     texture::{Dim2, Flat},
 };
 use luminance_derive::UniformInterface;
@@ -35,10 +35,10 @@ type OceanShader = Program<(), (), OceanShaderInterface>;
 
 use crate::fft::{Fft, FftFramebuffer, H0k, Hkt};
 pub struct Ocean {
-    pub h0k: H0k,
-    pub hkt: Hkt,
-    pub fft: Fft,
-    pub heightmap_buffer: FftFramebuffer,
+    h0k: H0k,
+    hkt: Hkt,
+    fft: Fft,
+    heightmap_buffer: FftFramebuffer,
     shader: OceanShader,
     tess: Tess,
 }
@@ -58,37 +58,7 @@ impl Ocean {
             include_str!("../shaders/ocean.vert"),
             include_str!("../shaders/ocean.frag"),
         );
-        let tess = {
-            let side: usize = 0x100;
-            let line_count = side + 1;
-
-            let restart = u32::max_value();
-            let indices = {
-                let mut indices =
-                    Vec::with_capacity(side * (line_count * 2 + 1) - 1);
-                let side = side as u32;
-                let line_count = line_count as u32;
-                for x in 0..side {
-                    if x != 0 {
-                        indices.push(restart);
-                    }
-                    for y in 0..line_count {
-                        indices.push(x * line_count + y);
-                        indices.push(x * line_count + y + line_count);
-                    }
-                }
-                assert_eq!(indices.len(), indices.capacity());
-                indices
-            };
-
-            TessBuilder::new(context)
-                .set_mode(Mode::TriangleStrip)
-                .set_primitive_restart_index(Some(restart))
-                .set_vertex_nb(indices.len())
-                .set_indices(indices)
-                .build()
-                .unwrap()
-        };
+        let tess = crate::attributeless_grid(context, 0x100);
 
         Self {
             h0k,

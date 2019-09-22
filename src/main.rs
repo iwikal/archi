@@ -1,7 +1,10 @@
 extern crate nalgebra_glm as glm;
 use gl;
 use luminance::{
-    context::GraphicsContext, framebuffer::Framebuffer, state::GraphicsState,
+    context::GraphicsContext,
+    framebuffer::Framebuffer,
+    state::GraphicsState,
+    tess::{Mode, Tess, TessBuilder},
 };
 use sdl2;
 use std::cell::RefCell;
@@ -12,9 +15,41 @@ mod debug;
 mod fft;
 mod ocean;
 mod shader;
+mod terrain;
 
 const SCREEN_WIDTH: u32 = 800;
 const SCREEN_HEIGHT: u32 = 600;
+
+pub fn attributeless_grid(context: &mut impl GraphicsContext, side_length: usize) -> Tess {
+    let line_count = side_length + 1;
+
+    let restart = u32::max_value();
+    let indices = {
+        let mut indices =
+            Vec::with_capacity(side_length * (line_count * 2 + 1) - 1);
+        let side_length = side_length as u32;
+        let line_count = line_count as u32;
+        for x in 0..side_length {
+            if x != 0 {
+                indices.push(restart);
+            }
+            for y in 0..line_count {
+                indices.push(x * line_count + y);
+                indices.push(x * line_count + y + line_count);
+            }
+        }
+        assert_eq!(indices.len(), indices.capacity());
+        indices
+    };
+
+    TessBuilder::new(context)
+        .set_mode(Mode::TriangleStrip)
+        .set_primitive_restart_index(Some(restart))
+        .set_vertex_nb(indices.len())
+        .set_indices(indices)
+        .build()
+        .unwrap()
+}
 
 struct SdlContext {
     _gl_context: sdl2::video::GLContext,
@@ -72,6 +107,7 @@ fn main() {
         camera::Camera::persp(width as f32 / height as f32, 0.9, 0.1, 100.0);
 
     let mut ocean = ocean::Ocean::new(context);
+    let terrain = terrain::Terrain::new(context);
 
     use std::time::Instant;
     let start = Instant::now();
@@ -125,6 +161,13 @@ fn main() {
             |pipeline, shader_gate| {
                 let view_projection = camera.projection() * camera.view();
                 ocean_frame.render(
+                    context,
+                    &pipeline,
+                    &shader_gate,
+                    view_projection,
+                );
+
+                terrain.render(
                     context,
                     &pipeline,
                     &shader_gate,
