@@ -1,11 +1,12 @@
-in vec2 v_uv;
+in vec3 sample_direction;
 
-uniform sampler2D box_face;
+uniform samplerCube cubemap;
 
 out vec4 frag;
 
 void main() {
   frag = vec4(1.0);
-  frag.xyz = texture(box_face, v_uv).xyz;
-  frag.w = 1.0;
+  frag.rgb = texture(cubemap, sample_direction).rgb;
+  frag.rgb += sample_direction;
+  frag.a = 1.0;
 }
