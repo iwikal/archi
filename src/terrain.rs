@@ -17,16 +17,6 @@ pub struct TerrainShaderInterface {
     view_projection: Uniform<M44>,
 }
 
-impl TerrainShaderInterface {
-    pub fn set_view_projection(&self, value: M44) {
-        self.view_projection.update(value);
-    }
-
-    pub fn set_heightmap(&self, value: &BoundTexture<Flat, Dim2, Floating>) {
-        self.heightmap.update(value);
-    }
-}
-
 type TerrainShader = Program<(), (), TerrainShaderInterface>;
 
 pub struct Terrain {
@@ -53,7 +43,7 @@ impl Terrain {
             let image = image.crop(0, 0, min, min);
             let image = image.resize_exact(0x100, 0x100, image::FilterType::Triangle);
             let size = [image.width(), image.height()];
-            let texture = Texture::new(context, size, 0, &sampler).unwrap();
+            let texture = Texture::new(context, size, 0, sampler).unwrap();
 
             let pixels: Vec<f32> = image
                 .raw_pixels()
@@ -64,7 +54,7 @@ impl Terrain {
                 })
                 .collect();
 
-            texture.upload(GenMipmaps::Yes, &pixels);
+            texture.upload(GenMipmaps::Yes, &pixels).unwrap();
             texture
         };
         let tess = crate::attributeless_grid(context, 0x100);
@@ -81,9 +71,8 @@ impl Terrain {
 
     pub fn render(
         &self,
-        context: &mut impl GraphicsContext,
         pipeline: &Pipeline,
-        shader_gate: &ShadingGate,
+        shader_gate: &mut ShadingGate<impl GraphicsContext>,
         view_projection: impl Into<M44>,
     ) {
         let Self {
@@ -91,11 +80,11 @@ impl Terrain {
             shader,
             tess,
         } = self;
-        shader_gate.shade(shader, |render_gate, iface| {
-            iface.set_view_projection(view_projection.into());
-            iface.set_heightmap(&pipeline.bind_texture(heightmap));
-            render_gate.render(RenderState::default(), |tess_gate| {
-                tess_gate.render(context, tess.into());
+        shader_gate.shade(shader, |iface, mut render_gate| {
+            iface.view_projection.update(view_projection.into());
+            iface.heightmap.update(&pipeline.bind_texture(heightmap));
+            render_gate.render(RenderState::default(), |mut tess_gate| {
+                tess_gate.render(tess);
             });
         })
     }

@@ -2,7 +2,7 @@ use luminance::{
     context::GraphicsContext,
     linear::M44,
     pipeline::{BoundTexture, Pipeline, ShadingGate},
-    pixel::{Floating, NormRGB8UI},
+    pixel::{NormUnsigned, NormRGB8UI},
     shader::program::{Program, Uniform},
     tess::Tess,
     texture::{Cubemap, Flat, Texture},
@@ -12,7 +12,7 @@ use std::path::Path;
 
 #[derive(UniformInterface)]
 pub struct SkyboxShaderInterface {
-    cubemap: Uniform<&'static BoundTexture<'static, Flat, Cubemap, Floating>>,
+    cubemap: Uniform<&'static BoundTexture<'static, Flat, Cubemap, NormUnsigned>>,
     view_projection: Uniform<M44>,
 }
 
@@ -98,7 +98,7 @@ impl Skybox {
         let cubemap = {
             let size = 2048;
             use luminance::texture::{CubeFace, GenMipmaps};
-            let texture = Texture::new(context, size, 0, &Default::default()).unwrap();
+            let texture = Texture::new(context, size, 0, Default::default()).unwrap();
 
             let path = path.as_ref();
             for &(face, filename) in [
@@ -142,21 +142,20 @@ impl Skybox {
 
     pub fn render(
         &self,
-        context: &mut impl GraphicsContext,
         pipeline: &Pipeline,
-        shader_gate: &ShadingGate,
+        shader_gate: &mut ShadingGate<impl GraphicsContext>,
         camera: &crate::camera::Camera,
     ) {
         let view_projection = camera.projection() * camera.orientation();
         let bound_cubemap = pipeline.bind_texture(&self.cubemap);
-        shader_gate.shade(&self.shader, |render_gate, iface| {
+        shader_gate.shade(&self.shader, |iface, mut render_gate| {
             use luminance::{depth_test::DepthTest, render_state::RenderState};
             let state = RenderState::default()
                 .set_depth_test(DepthTest::Off);
-            render_gate.render(state, |tess_gate| {
+            render_gate.render(state, |mut tess_gate| {
                 iface.view_projection.update(view_projection.into());
                 iface.cubemap.update(&bound_cubemap);
-                tess_gate.render(context, (&self.tess).into());
+                tess_gate.render(&self.tess);
             });
         })
     }
