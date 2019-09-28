@@ -54,7 +54,7 @@ impl H0k {
         sampler.mag_filter = MagFilter::Nearest;
         sampler.min_filter = MinFilter::Nearest;
 
-        let input_texture = Texture::new(context, size, 0, &sampler).unwrap();
+        let input_texture = Texture::new(context, size, 0, sampler).unwrap();
         {
             let length = N * N;
             let mut pixels = Vec::with_capacity(length as usize);
@@ -64,7 +64,7 @@ impl H0k {
                 pixels.push(rng.gen());
             }
 
-            input_texture.upload(GenMipmaps::No, &pixels);
+            input_texture.upload(GenMipmaps::No, &pixels).unwrap();
         }
 
         let tess = TessBuilder::new(context)
@@ -88,15 +88,21 @@ impl H0k {
 
     pub fn render(
         &self,
-        context: &mut impl GraphicsContext,
-        builder: &Builder,
+        builder: &mut Builder<impl GraphicsContext>,
     ) -> &H0kTexture {
+        let Self {
+            framebuffer,
+            input_texture,
+            shader,
+            tess,
+            ..
+        } = self;
         builder.pipeline(
-            &self.framebuffer,
+            framebuffer,
             [1.0, 1.0, 0.0, 1.0],
-            |pipeline, shader_gate| {
-                let bound_noise = pipeline.bind_texture(&self.input_texture);
-                shader_gate.shade(&self.shader, |render_gate, iface| {
+            |pipeline, mut shader_gate| {
+                let bound_noise = pipeline.bind_texture(input_texture);
+                shader_gate.shade(shader, |iface, mut render_gate| {
                     iface.input_texture.update(&bound_noise);
                     iface.n.update(N as i32);
                     iface.scale.update(self.scale);
@@ -105,13 +111,13 @@ impl H0k {
                     iface.direction.update(self.direction.into());
                     iface.l.update(self.l);
                     use luminance::render_state::RenderState;
-                    render_gate.render(RenderState::default(), |tess_gate| {
-                        tess_gate.render(context, (&self.tess).into());
+                    render_gate.render(RenderState::default(), |mut tess_gate| {
+                        tess_gate.render(tess);
                     });
                 });
             },
         );
-        self.framebuffer.color_slot()
+        framebuffer.color_slot()
     }
 }
 
@@ -161,28 +167,33 @@ impl Hkt {
 
     pub fn render(
         &self,
-        context: &mut impl GraphicsContext,
-        builder: &Builder,
+        builder: &mut Builder<impl GraphicsContext>,
         time: f32,
         input_texture: &H0kTexture,
     ) -> &HktTexture {
+        let Self {
+            framebuffer,
+            shader,
+            tess,
+            ..
+        } = self;
         builder.pipeline(
-            &self.framebuffer,
+            framebuffer,
             [0.0, 0.0, 0.0, 1.0],
-            |pipeline, shader_gate| {
+            |pipeline, mut shader_gate| {
                 let bound_noise = pipeline.bind_texture(input_texture);
-                shader_gate.shade(&self.shader, |render_gate, iface| {
+                shader_gate.shade(shader, |iface, mut render_gate| {
                     iface.input_texture.update(&bound_noise);
                     iface.n.update(N as i32);
                     iface.time.update(time);
                     use luminance::render_state::RenderState;
-                    render_gate.render(RenderState::default(), |tess_gate| {
-                        tess_gate.render(context, (&self.tess).into());
+                    render_gate.render(RenderState::default(), |mut tess_gate| {
+                        tess_gate.render(tess);
                     });
                 });
             },
         );
-        self.framebuffer.color_slot()
+        framebuffer.color_slot()
     }
 }
 
@@ -197,7 +208,7 @@ pub fn twiddle_indices(context: &mut impl GraphicsContext) -> TwiddleTexture {
     let bits = (N as f32).log2() as u32;
     let width = bits;
     let height = N;
-    let texture = Texture::new(context, [width, height], 0, &sampler).unwrap();
+    let texture = Texture::new(context, [width, height], 0, sampler).unwrap();
     {
         const TAU: f32 = std::f32::consts::PI * 2.0;
 
@@ -232,7 +243,7 @@ pub fn twiddle_indices(context: &mut impl GraphicsContext) -> TwiddleTexture {
             }
         }
 
-        texture.upload(GenMipmaps::No, &pixels);
+        texture.upload(GenMipmaps::No, &pixels).unwrap();
     }
 
     texture
@@ -301,8 +312,7 @@ impl Fft {
 
     pub fn render<'a>(
         &self,
-        context: &mut impl GraphicsContext,
-        builder: &Builder,
+        builder: &mut Builder<impl GraphicsContext>,
         input_texture: &FftTexture,
         output_buffer: &'a mut FftFramebuffer,
     ) -> &'a FftTexture {
@@ -332,13 +342,13 @@ impl Fft {
                 builder.pipeline(
                     output,
                     [1.0, 1.0, 0.0, 1.0],
-                    |pipeline, shader_gate| {
+                    |pipeline, mut shader_gate| {
                         let bound_twiddle =
                             pipeline.bind_texture(twiddle_indices);
                         let bound_input = pipeline.bind_texture(input);
                         shader_gate.shade(
                             butterfly_shader,
-                            |render_gate, iface| {
+                            |iface, mut render_gate| {
                                 iface.twiddle_indices.update(&bound_twiddle);
                                 iface.input_texture.update(&bound_input);
                                 iface.stage.update(stage as i32);
@@ -346,8 +356,8 @@ impl Fft {
                                 use luminance::render_state::RenderState;
                                 render_gate.render(
                                     RenderState::default(),
-                                    |tess_gate| {
-                                        tess_gate.render(context, tess.into());
+                                    |mut tess_gate| {
+                                        tess_gate.render(tess);
                                     },
                                 );
                             },
@@ -363,17 +373,17 @@ impl Fft {
             builder.pipeline(
                 output,
                 [1.0, 1.0, 0.0, 1.0],
-                |pipeline, shader_gate| {
+                |pipeline, mut shader_gate| {
                     let bound_input = pipeline.bind_texture(input);
                     shader_gate.shade(
                         inversion_shader,
-                        |render_gate, iface| {
+                        |iface, mut render_gate| {
                             iface.input_texture.update(&bound_input);
                             use luminance::render_state::RenderState;
                             render_gate.render(
                                 RenderState::default(),
-                                |tess_gate| {
-                                    tess_gate.render(context, tess.into());
+                                |mut tess_gate| {
+                                    tess_gate.render(tess);
                                 },
                             );
                         },

@@ -66,7 +66,7 @@ fn main() {
     let (width, height) = context.window.size();
 
     let mut event_pump = sdl.event_pump().unwrap();
-    let mut back_buffer = Framebuffer::back_buffer([width, height]);
+    let mut back_buffer = Framebuffer::back_buffer(context, [width, height]);
 
     let mut camera =
         camera::Camera::persp(width as f32 / height as f32, 0.9, 0.1, 100.0);
@@ -105,29 +105,28 @@ fn main() {
 
         if let Some([width, height]) = resize {
             let size = [width as u32, height as u32];
-            back_buffer = Framebuffer::back_buffer(size);
+            back_buffer = Framebuffer::back_buffer(context, size);
         }
 
         camera
             .take_input(&event_pump, delta_t.as_micros() as f32 / 1_000_000.0);
 
-        let builder = context.pipeline_builder();
+        let mut builder = context.pipeline_builder();
 
         let duration = current_frame_start - start;
         let f_time = duration.as_secs() as f32
             + duration.subsec_nanos() as f32 / 1_000_000_000.0;
 
-        let ocean_frame = ocean.simulate(context, &builder, f_time);
+        let ocean_frame = ocean.simulate(&mut builder, f_time);
 
         builder.pipeline(
             &back_buffer,
             [0.1, 0.2, 0.3, 1.0],
-            |pipeline, shader_gate| {
+            |pipeline, mut shader_gate| {
                 let view_projection = camera.projection() * camera.view();
                 ocean_frame.render(
-                    context,
                     &pipeline,
-                    &shader_gate,
+                    &mut shader_gate,
                     view_projection,
                 );
             },

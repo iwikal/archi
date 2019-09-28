@@ -47,8 +47,8 @@ impl Ocean {
     pub fn new(context: &mut impl GraphicsContext) -> Self {
         let h0k = H0k::new(context);
         {
-            let builder = context.pipeline_builder();
-            h0k.render(context, &builder);
+            let mut builder = context.pipeline_builder();
+            h0k.render(&mut builder);
         }
         let hkt = Hkt::new(context);
         let fft = Fft::new(context);
@@ -102,8 +102,7 @@ impl Ocean {
 
     pub fn simulate(
         &mut self,
-        context: &mut impl GraphicsContext,
-        builder: &Builder,
+        builder: &mut Builder<impl GraphicsContext>,
         time: f32,
     ) -> OceanFrame {
         let Self {
@@ -113,9 +112,8 @@ impl Ocean {
             heightmap_buffer,
             ..
         } = self;
-        hkt.render(context, builder, time, h0k.framebuffer.color_slot());
+        hkt.render(builder, time, h0k.framebuffer.color_slot());
         fft.render(
-            context,
             builder,
             hkt.framebuffer.color_slot(),
             heightmap_buffer,
@@ -129,9 +127,8 @@ pub struct OceanFrame<'a>(&'a Ocean);
 impl<'a> OceanFrame<'a> {
     pub fn render(
         &self,
-        context: &mut impl GraphicsContext,
         pipeline: &Pipeline,
-        shader_gate: &ShadingGate,
+        shader_gate: &mut ShadingGate<impl GraphicsContext>,
         view_projection: impl Into<M44>,
     ) {
         let Self(Ocean {
@@ -142,14 +139,14 @@ impl<'a> OceanFrame<'a> {
         }) = self;
 
         let heightmap = pipeline.bind_texture(heightmap_buffer.color_slot());
-        shader_gate.shade(shader, |render_gate, iface| {
+        shader_gate.shade(shader, |iface, mut render_gate| {
             iface.set_view_projection(view_projection.into());
             iface.set_heightmap(&heightmap);
-            render_gate.render(RenderState::default(), |tess_gate| {
+            render_gate.render(RenderState::default(), |mut tess_gate| {
                 for x in -1..1 {
                     for y in -1..1 {
                         iface.set_offset([x as f32, y as f32]);
-                        tess_gate.render(context, tess.into());
+                        tess_gate.render(tess);
                     }
                 }
             });
