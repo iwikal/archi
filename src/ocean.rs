@@ -3,7 +3,6 @@ use luminance::{
     linear::M44,
     pipeline::{BoundTexture, Builder, Pipeline, ShadingGate},
     pixel::Floating,
-    render_state::RenderState,
     shader::program::{Program, Uniform},
     tess::Tess,
     texture::{Dim2, Flat},
@@ -15,20 +14,6 @@ pub struct OceanShaderInterface {
     heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
     view_projection: Uniform<M44>,
     offset: Uniform<[f32; 2]>,
-}
-
-impl OceanShaderInterface {
-    pub fn set_view_projection(&self, value: M44) {
-        self.view_projection.update(value);
-    }
-
-    pub fn set_offset(&self, value: [f32; 2]) {
-        self.offset.update(value);
-    }
-
-    pub fn set_heightmap(&self, value: &BoundTexture<Flat, Dim2, Floating>) {
-        self.heightmap.update(value);
-    }
 }
 
 type OceanShader = Program<(), (), OceanShaderInterface>;
@@ -113,12 +98,12 @@ impl<'a> OceanFrame<'a> {
 
         let heightmap = pipeline.bind_texture(heightmap_buffer.color_slot());
         shader_gate.shade(shader, |render_gate, iface| {
-            iface.set_view_projection(view_projection.into());
-            iface.set_heightmap(&heightmap);
-            render_gate.render(RenderState::default(), |tess_gate| {
+            iface.view_projection.update(view_projection.into());
+            iface.heightmap.update(&heightmap);
+            render_gate.render(Default::default(), |tess_gate| {
                 for x in -1..1 {
                     for y in -1..1 {
-                        iface.set_offset([x as f32, y as f32]);
+                        iface.offset.update([x as f32, y as f32]);
                         tess_gate.render(context, tess.into());
                     }
                 }
