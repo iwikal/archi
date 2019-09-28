@@ -1,6 +1,7 @@
 #[derive(Debug)]
 pub struct Camera {
     position: glm::Vec3,
+    velocity: glm::Vec3,
     pitch: f32,
     yaw: f32,
     orientation: glm::Mat4,
@@ -8,9 +9,10 @@ pub struct Camera {
 }
 
 impl Camera {
-    fn new(projection: glm::Mat4) -> Camera {
-        Camera {
+    fn new(projection: glm::Mat4) -> Self {
+        Self {
             position: glm::zero(),
+            velocity: glm::zero(),
             pitch: 0.,
             yaw: 0.,
             orientation: glm::identity(),
@@ -18,9 +20,9 @@ impl Camera {
         }
     }
 
-    pub fn persp(aspect: f32, fov: f32, near: f32, far: f32) -> Camera {
+    pub fn persp(aspect: f32, fov: f32, near: f32, far: f32) -> Self {
         let projection = glm::perspective_rh(aspect, fov, near, far);
-        Camera::new(projection)
+        Self::new(projection)
     }
 
     pub fn take_input(&mut self, pump: &sdl2::EventPump, delta_t: f32) {
@@ -81,9 +83,10 @@ impl Camera {
                 glm::vec3(x * cos + z * -sin, y, z * cos + x * sin)
             };
 
-            move_vector *= 2.0 * delta_t;
-
-            self.position += move_vector;
+            move_vector *= delta_t;
+            self.velocity *= 0.99;
+            self.velocity += move_vector;
+            self.position += self.velocity;
         }
     }
 
