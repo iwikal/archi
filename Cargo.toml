@@ -8,9 +8,10 @@ edition = "2018"
 
 [dependencies]
 gl = "*"
+image = "*"
 luminance = "*"
 luminance-derive = "*"
 nalgebra-glm = "*"
+rand = "*"
 sdl2 = "*"
 tiny_ecs = "*"
-rand = "*"

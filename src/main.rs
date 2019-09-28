@@ -15,6 +15,7 @@ mod debug;
 mod fft;
 mod ocean;
 mod shader;
+mod skybox;
 mod terrain;
 
 const SCREEN_WIDTH: u32 = 800;
@@ -104,10 +105,11 @@ fn main() {
     let mut back_buffer = Framebuffer::back_buffer([width, height]);
 
     let mut camera =
-        camera::Camera::persp(width as f32 / height as f32, 0.9, 0.1, 100.0);
+        camera::Camera::persp(width as f32 / height as f32, 0.9, 0.1, 1000.0);
 
+    let skybox = skybox::Skybox::new(context, "/home/iwikal/poods");
     let mut ocean = ocean::Ocean::new(context);
-    let terrain = terrain::Terrain::new(context);
+    let terrain = terrain::Terrain::new(context, "assets/heightmap.png");
 
     use std::time::Instant;
     let start = Instant::now();
@@ -160,6 +162,14 @@ fn main() {
             [0.1, 0.2, 0.3, 1.0],
             |pipeline, shader_gate| {
                 let view_projection = camera.projection() * camera.view();
+
+                skybox.render(
+                    context,
+                    &pipeline,
+                    &shader_gate,
+                    &camera,
+                );
+
                 ocean_frame.render(
                     context,
                     &pipeline,

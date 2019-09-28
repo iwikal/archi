@@ -97,4 +97,8 @@ impl Camera {
     pub fn view(&self) -> glm::Mat4 {
         glm::translate(&self.orientation, &-self.position)
     }
+
+    pub fn orientation(&self) -> glm::Mat4 {
+        self.orientation
+    }
 }

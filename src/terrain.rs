@@ -9,6 +9,7 @@ use luminance::{
     texture::{Dim2, Flat, Texture},
 };
 use luminance_derive::UniformInterface;
+use image::GenericImageView;
 
 #[derive(UniformInterface)]
 pub struct TerrainShaderInterface {
@@ -35,14 +36,35 @@ pub struct Terrain {
 }
 
 impl Terrain {
-    pub fn new(context: &mut impl GraphicsContext) -> Self {
+    pub fn new(
+        context: &mut impl GraphicsContext,
+        heightmap: impl AsRef<std::path::Path>,
+    ) -> Self {
         let heightmap = {
-            use luminance::texture::{MagFilter, MinFilter, Sampler};
+            use luminance::texture::{GenMipmaps, MagFilter, MinFilter, Sampler};
             let mut sampler = Sampler::default();
             sampler.mag_filter = MagFilter::Nearest;
             sampler.min_filter = MinFilter::Nearest;
-            let texture = Texture::new(context, [0, 0], 0, &sampler).unwrap();
+            let heightmap = heightmap.as_ref();
+            let mut image = image::open(heightmap).unwrap_or_else(|e| {
+                panic!("could not load texture {:?}: {}", heightmap, e);
+            });
+            let min = u32::min(image.width(), image.height());
+            let image = image.crop(0, 0, min, min);
+            let image = image.resize_exact(0x100, 0x100, image::FilterType::Triangle);
+            let size = [image.width(), image.height()];
+            let texture = Texture::new(context, size, 0, &sampler).unwrap();
 
+            let pixels: Vec<f32> = image
+                .raw_pixels()
+                .into_iter()
+                .map(|p| {
+                    let p = p as f32 / 255.0;
+                    p * 20.0 - 3.0
+                })
+                .collect();
+
+            texture.upload(GenMipmaps::Yes, &pixels);
             texture
         };
         let tess = crate::attributeless_grid(context, 0x100);
