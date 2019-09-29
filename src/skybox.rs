@@ -150,9 +150,9 @@ impl Skybox {
         let view_projection = camera.projection() * camera.orientation();
         let bound_cubemap = pipeline.bind_texture(&self.cubemap);
         shader_gate.shade(&self.shader, |iface, mut render_gate| {
-            use luminance::{depth_test::DepthTest, render_state::RenderState};
+            use luminance::{depth_test::DepthComparison, render_state::RenderState};
             let state = RenderState::default()
-                .set_depth_test(DepthTest::Off);
+                .set_depth_test(DepthComparison::LessOrEqual);
             render_gate.render(state, |mut tess_gate| {
                 iface.view_projection.update(view_projection.into());
                 iface.cubemap.update(&bound_cubemap);

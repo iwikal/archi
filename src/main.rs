@@ -163,12 +163,6 @@ fn main() {
             |pipeline, mut shader_gate| {
                 let view_projection = camera.projection() * camera.view();
 
-                skybox.render(
-                    &pipeline,
-                    &mut shader_gate,
-                    &camera,
-                );
-
                 ocean_frame.render(
                     &pipeline,
                     &mut shader_gate,
@@ -179,6 +173,12 @@ fn main() {
                     &pipeline,
                     &mut shader_gate,
                     view_projection,
+                );
+
+                skybox.render(
+                    &pipeline,
+                    &mut shader_gate,
+                    &camera,
                 );
             },
         );
