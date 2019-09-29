@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 gl = "*"
 image = "*"
-luminance = "*"
+luminance = { git = "https://github.com/iwikal/luminance-rs", branch = "cubemap-pixel-count" }
 luminance-derive = "*"
 nalgebra-glm = "*"
 rand = "*"

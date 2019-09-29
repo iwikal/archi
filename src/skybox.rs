@@ -119,11 +119,11 @@ impl Skybox {
                 }
 
                 texture.upload_part_raw(
-                    GenMipmaps::Yes,
+                    GenMipmaps::No,
                     ([0, 0], face),
                     size,
                     &image.raw_pixels(),
-                );
+                ).unwrap();
             }
 
             texture
@@ -133,6 +133,7 @@ impl Skybox {
             include_str!("../shaders/skybox.vert"),
             include_str!("../shaders/skybox.frag"),
         );
+
         Self {
             cubemap,
             shader,
