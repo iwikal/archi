@@ -1,5 +1,5 @@
 [package]
-name = "fft-water"
+name = "archi"
 version = "0.1.0"
 authors = ["Joel Nordström <e.joel.nordstrom@gmail.com>"]
 edition = "2018"
