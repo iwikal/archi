@@ -1,14 +1,9 @@
 extern crate nalgebra_glm as glm;
-use gl;
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
-    state::GraphicsState,
     tess::{Mode, Tess, TessBuilder},
 };
-use sdl2;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 mod camera;
 mod debug;
@@ -17,9 +12,7 @@ mod ocean;
 mod shader;
 mod skybox;
 mod terrain;
-
-const SCREEN_WIDTH: u32 = 800;
-const SCREEN_HEIGHT: u32 = 600;
+mod context;
 
 pub fn attributeless_grid(context: &mut impl GraphicsContext, side_length: usize) -> Tess {
     let line_count = side_length + 1;
@@ -52,56 +45,12 @@ pub fn attributeless_grid(context: &mut impl GraphicsContext, side_length: usize
         .unwrap()
 }
 
-struct SdlContext {
-    _gl_context: sdl2::video::GLContext,
-    window: sdl2::video::Window,
-    state: Rc<RefCell<GraphicsState>>,
-}
-
-unsafe impl GraphicsContext for SdlContext {
-    fn state(&self) -> &Rc<RefCell<GraphicsState>> {
-        &self.state
-    }
-}
-
-impl SdlContext {
-    fn swap_buffers(&mut self) {
-        self.window.gl_swap_window();
-    }
-}
-
 fn main() {
-    let sdl = sdl2::init().expect("Could not init sdl2");
-
-    let context = {
-        let video_system =
-            sdl.video().expect("Could not initialize video system");
-        sdl.mouse().set_relative_mouse_mode(true);
-
-        let window = video_system
-            .window("Hello", SCREEN_WIDTH, SCREEN_HEIGHT)
-            .opengl()
-            .fullscreen_desktop()
-            .build()
-            .expect("Could not create window");
-        let _gl_context = window
-            .gl_create_context()
-            .expect("Could not create OpenGL context");
-        gl::load_with(|s| video_system.gl_get_proc_address(s) as *const _);
-
-        let state = GraphicsState::new()
-            .expect("Only one graphics state per thread allowed");
-
-        &mut SdlContext {
-            _gl_context,
-            window,
-            state: Rc::new(RefCell::new(state)),
-        }
-    };
+    let context = &mut context::SdlContext::new(800, 600);
 
     let (width, height) = context.window.size();
 
-    let mut event_pump = sdl.event_pump().unwrap();
+    let mut event_pump = context.sdl.event_pump().unwrap();
     let mut back_buffer = Framebuffer::back_buffer(context, [width, height]);
 
     let mut camera =
@@ -183,7 +132,7 @@ fn main() {
             },
         );
 
-        context.swap_buffers();
+        context.window.gl_swap_window();
         previous_frame_start = current_frame_start;
     }
 }
