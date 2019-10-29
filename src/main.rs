@@ -6,15 +6,18 @@ use luminance::{
 };
 
 mod camera;
+mod context;
 mod debug;
 mod fft;
 mod ocean;
 mod shader;
 mod skybox;
 mod terrain;
-mod context;
 
-pub fn attributeless_grid(context: &mut impl GraphicsContext, side_length: usize) -> Tess {
+pub fn attributeless_grid(
+    context: &mut impl GraphicsContext,
+    side_length: usize,
+) -> Tess {
     let line_count = side_length + 1;
 
     let restart = u32::max_value();
@@ -118,17 +121,9 @@ fn main() {
                     view_projection,
                 );
 
-                terrain.render(
-                    &pipeline,
-                    &mut shader_gate,
-                    view_projection,
-                );
+                terrain.render(&pipeline, &mut shader_gate, view_projection);
 
-                skybox.render(
-                    &pipeline,
-                    &mut shader_gate,
-                    &camera,
-                );
+                skybox.render(&pipeline, &mut shader_gate, &camera);
             },
         );
 

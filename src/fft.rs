@@ -111,9 +111,12 @@ impl H0k {
                     iface.direction.update(self.direction.into());
                     iface.l.update(self.l);
                     use luminance::render_state::RenderState;
-                    render_gate.render(RenderState::default(), |mut tess_gate| {
-                        tess_gate.render(tess);
-                    });
+                    render_gate.render(
+                        RenderState::default(),
+                        |mut tess_gate| {
+                            tess_gate.render(tess);
+                        },
+                    );
                 });
             },
         );
@@ -187,9 +190,12 @@ impl Hkt {
                     iface.n.update(N as i32);
                     iface.time.update(time);
                     use luminance::render_state::RenderState;
-                    render_gate.render(RenderState::default(), |mut tess_gate| {
-                        tess_gate.render(tess);
-                    });
+                    render_gate.render(
+                        RenderState::default(),
+                        |mut tess_gate| {
+                            tess_gate.render(tess);
+                        },
+                    );
                 });
             },
         );

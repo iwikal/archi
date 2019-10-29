@@ -68,11 +68,7 @@ impl Ocean {
             ..
         } = self;
         hkt.render(builder, time, h0k.framebuffer.color_slot());
-        fft.render(
-            builder,
-            hkt.framebuffer.color_slot(),
-            heightmap_buffer,
-        );
+        fft.render(builder, hkt.framebuffer.color_slot(), heightmap_buffer);
         OceanFrame(self)
     }
 }

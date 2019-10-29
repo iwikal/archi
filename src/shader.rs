@@ -5,11 +5,8 @@ where
     S: luminance::vertex::Semantics,
     Uni: luminance::shader::program::UniformInterface,
 {
-    let BuiltProgram {
-        program,
-        warnings,
-    } = Program::from_strings(None, vert, None, frag)
-        .unwrap_or_else(|error| {
+    let BuiltProgram { program, warnings } =
+        Program::from_strings(None, vert, None, frag).unwrap_or_else(|error| {
             eprintln!("{}", error);
             panic!();
         });

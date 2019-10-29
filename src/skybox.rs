@@ -2,17 +2,18 @@ use luminance::{
     context::GraphicsContext,
     linear::M44,
     pipeline::{BoundTexture, Pipeline, ShadingGate},
-    pixel::{NormUnsigned, NormRGB8UI},
+    pixel::{NormRGB8UI, NormUnsigned},
     shader::program::{Program, Uniform},
     tess::Tess,
     texture::{Cubemap, Flat, Texture},
 };
-use luminance_derive::{Semantics, Vertex, UniformInterface};
+use luminance_derive::{Semantics, UniformInterface, Vertex};
 use std::path::Path;
 
 #[derive(UniformInterface)]
 pub struct SkyboxShaderInterface {
-    cubemap: Uniform<&'static BoundTexture<'static, Flat, Cubemap, NormUnsigned>>,
+    cubemap:
+        Uniform<&'static BoundTexture<'static, Flat, Cubemap, NormUnsigned>>,
     view_projection: Uniform<M44>,
 }
 
@@ -48,7 +49,7 @@ impl Skybox {
         path: impl AsRef<Path>,
     ) -> Self {
         let tess = {
-            use luminance::tess::{TessBuilder, Mode};
+            use luminance::tess::{Mode, TessBuilder};
             let (vertices, indices) = {
                 let n_vertices = 24;
                 let n_indices = 36;
@@ -70,7 +71,10 @@ impl Skybox {
                                 }
                                 vertices.push(CubeVertex {
                                     position: VertexPosition::new(position),
-                                    uv: VertexUv::new([f32::from(x), f32::from(y)]),
+                                    uv: VertexUv::new([
+                                        f32::from(x),
+                                        f32::from(y),
+                                    ]),
                                 });
                             }
                         }
@@ -98,7 +102,8 @@ impl Skybox {
         let cubemap = {
             let size = 2048;
             use luminance::texture::{CubeFace, GenMipmaps};
-            let texture = Texture::new(context, size, 0, Default::default()).unwrap();
+            let texture =
+                Texture::new(context, size, 0, Default::default()).unwrap();
 
             let path = path.as_ref();
             for &(face, filename) in [
@@ -108,22 +113,27 @@ impl Skybox {
                 (CubeFace::NegativeX, "negative_x.png"),
                 (CubeFace::NegativeY, "negative_y.png"),
                 (CubeFace::NegativeZ, "negative_z.png"),
-            ].iter() {
-                let image = image::open(&path.join(filename)).unwrap_or_else(|e| {
-                    panic!("could not open {:?}: {}", path, e);
-                });
+            ]
+            .iter()
+            {
+                let image =
+                    image::open(&path.join(filename)).unwrap_or_else(|e| {
+                        panic!("could not open {:?}: {}", path, e);
+                    });
 
                 match image {
                     image::ImageRgb8(..) => (),
                     _ => panic!("expected rgb8 ui format"),
                 }
 
-                texture.upload_part_raw(
-                    GenMipmaps::No,
-                    ([0, 0], face),
-                    size,
-                    &image.raw_pixels(),
-                ).unwrap();
+                texture
+                    .upload_part_raw(
+                        GenMipmaps::No,
+                        ([0, 0], face),
+                        size,
+                        &image.raw_pixels(),
+                    )
+                    .unwrap();
             }
 
             texture
@@ -150,7 +160,9 @@ impl Skybox {
         let view_projection = camera.projection() * camera.orientation();
         let bound_cubemap = pipeline.bind_texture(&self.cubemap);
         shader_gate.shade(&self.shader, |iface, mut render_gate| {
-            use luminance::{depth_test::DepthComparison, render_state::RenderState};
+            use luminance::{
+                depth_test::DepthComparison, render_state::RenderState,
+            };
             let state = RenderState::default()
                 .set_depth_test(DepthComparison::LessOrEqual);
             render_gate.render(state, |mut tess_gate| {

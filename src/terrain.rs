@@ -1,3 +1,4 @@
+use image::GenericImageView;
 use luminance::{
     context::GraphicsContext,
     linear::M44,
@@ -9,7 +10,6 @@ use luminance::{
     texture::{Dim2, Flat, Texture},
 };
 use luminance_derive::UniformInterface;
-use image::GenericImageView;
 
 #[derive(UniformInterface)]
 pub struct TerrainShaderInterface {
@@ -31,7 +31,9 @@ impl Terrain {
         heightmap: impl AsRef<std::path::Path>,
     ) -> Self {
         let heightmap = {
-            use luminance::texture::{GenMipmaps, MagFilter, MinFilter, Sampler};
+            use luminance::texture::{
+                GenMipmaps, MagFilter, MinFilter, Sampler,
+            };
             let mut sampler = Sampler::default();
             sampler.mag_filter = MagFilter::Nearest;
             sampler.min_filter = MinFilter::Nearest;
@@ -41,7 +43,8 @@ impl Terrain {
             });
             let min = u32::min(image.width(), image.height());
             let image = image.crop(0, 0, min, min);
-            let image = image.resize_exact(0x100, 0x100, image::FilterType::Triangle);
+            let image =
+                image.resize_exact(0x100, 0x100, image::FilterType::Triangle);
             let size = [image.width(), image.height()];
             let texture = Texture::new(context, size, 0, sampler).unwrap();
 

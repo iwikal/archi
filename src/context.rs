@@ -1,9 +1,9 @@
 use gl;
+use luminance::context::GraphicsContext;
+use luminance::state::GraphicsState;
 use sdl2;
 use std::cell::RefCell;
 use std::rc::Rc;
-use luminance::context::GraphicsContext;
-use luminance::state::GraphicsState;
 
 pub struct SdlContext {
     pub sdl: sdl2::Sdl,
