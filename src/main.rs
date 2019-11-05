@@ -98,8 +98,9 @@ fn main() {
             back_buffer = Framebuffer::back_buffer(context, size);
         }
 
-        camera
-            .take_input(&event_pump, delta_t.as_micros() as f32 / 1_000_000.0);
+        camera.take_input(&event_pump);
+        let delta_f = delta_t.as_micros() as f32 / 1_000_000.0;
+        camera.physics_tick(delta_f);
 
         let mut builder = context.pipeline_builder();
 

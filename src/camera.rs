@@ -2,17 +2,21 @@
 pub struct Camera {
     position: glm::Vec3,
     velocity: glm::Vec3,
+    acceleration: glm::Vec3,
     pitch: f32,
     yaw: f32,
     orientation: glm::Mat4,
     projection: glm::Mat4,
 }
 
+const SPEED: f32 = 50.0;
+
 impl Camera {
     fn new(projection: glm::Mat4) -> Self {
         Self {
             position: glm::zero(),
             velocity: glm::zero(),
+            acceleration: glm::zero(),
             pitch: 0.,
             yaw: 0.,
             orientation: glm::identity(),
@@ -25,7 +29,7 @@ impl Camera {
         Self::new(projection)
     }
 
-    pub fn take_input(&mut self, pump: &sdl2::EventPump, delta_t: f32) {
+    pub fn take_input(&mut self, pump: &sdl2::EventPump) {
         {
             let scale = 1.0 / 128.0;
             let state = pump.relative_mouse_state();
@@ -74,7 +78,7 @@ impl Camera {
             let length = if length > 1.0 { length } else { 1.0 };
             move_vector /= length;
 
-            move_vector = {
+            self.acceleration = {
                 let x = move_vector.x;
                 let y = move_vector.y;
                 let z = move_vector.z;
@@ -83,11 +87,15 @@ impl Camera {
                 glm::vec3(x * cos + z * -sin, y, z * cos + x * sin)
             };
 
-            move_vector *= delta_t;
-            self.velocity *= 0.99;
-            self.velocity += move_vector;
-            self.position += self.velocity;
+            self.acceleration *= SPEED;
         }
+    }
+
+    pub fn physics_tick(&mut self, delta_t: f32) {
+        self.velocity *= 0.99;
+        self.velocity += self.acceleration * delta_t;
+        self.position += self.velocity * delta_t;
+        self.acceleration = glm::zero();
     }
 
     pub fn projection(&self) -> glm::Mat4 {
