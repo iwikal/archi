@@ -113,7 +113,10 @@ fn main() {
             &back_buffer,
             [0.1, 0.2, 0.3, 1.0],
             |pipeline, mut shader_gate| {
-                let view_projection = camera.projection() * camera.view();
+                let view = camera.view();
+                let projection = camera.projection();
+
+                let view_projection = projection * view;
 
                 ocean_frame.render(
                     &pipeline,
@@ -123,7 +126,7 @@ fn main() {
 
                 terrain.render(&pipeline, &mut shader_gate, view_projection);
 
-                skybox.render(&pipeline, &mut shader_gate, &camera);
+                skybox.render(&pipeline, &mut shader_gate, view, projection);
             },
         );
 

@@ -155,9 +155,17 @@ impl Skybox {
         &self,
         pipeline: &Pipeline,
         shader_gate: &mut ShadingGate<impl GraphicsContext>,
-        camera: &crate::camera::Camera,
+        view: glm::Mat4,
+        projection: glm::Mat4,
     ) {
-        let view_projection = camera.projection() * camera.orientation();
+        let mut view = view;
+
+        view[12] = 0.0;
+        view[13] = 0.0;
+        view[14] = 0.0;
+
+        let view_projection = projection * view;
+
         let bound_cubemap = pipeline.bind_texture(&self.cubemap);
         shader_gate.shade(&self.shader, |iface, mut render_gate| {
             use luminance::{
