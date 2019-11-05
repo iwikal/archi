@@ -52,7 +52,7 @@ impl Terrain {
                 .raw_pixels()
                 .into_iter()
                 .map(|p| {
-                    let p = p as f32 / 255.0;
+                    let p = f32::from(p) / 255.0;
                     p * 20.0 - 3.0
                 })
                 .collect();
