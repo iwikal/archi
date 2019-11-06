@@ -66,7 +66,7 @@ fn main() {
     use std::time::Instant;
     let start = Instant::now();
     let mut previous_frame_start = start;
-    'app: loop {
+    'game_loop: loop {
         let current_frame_start = Instant::now();
         let delta_t = current_frame_start - previous_frame_start;
 
@@ -75,12 +75,12 @@ fn main() {
             use sdl2::event::Event;
             match event {
                 Event::Quit { .. } => {
-                    break 'app;
+                    break 'game_loop;
                 }
                 Event::KeyDown { scancode, .. } => {
                     use sdl2::keyboard::Scancode::*;
                     if let Some(Escape) = scancode {
-                        break 'app;
+                        break 'game_loop;
                     }
                 }
                 Event::Window { win_event, .. } => {
