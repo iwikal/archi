@@ -1,52 +1,15 @@
 extern crate nalgebra_glm as glm;
-use luminance::{
-    context::GraphicsContext,
-    framebuffer::Framebuffer,
-    tess::{Mode, Tess, TessBuilder},
-};
+use luminance::{context::GraphicsContext, framebuffer::Framebuffer};
 
 mod camera;
 mod context;
 mod debug;
 mod fft;
+mod grid;
 mod ocean;
 mod shader;
 mod skybox;
 mod terrain;
-
-pub fn attributeless_grid(
-    context: &mut impl GraphicsContext,
-    side_length: usize,
-) -> Tess {
-    let line_count = side_length + 1;
-
-    let restart = u32::max_value();
-    let indices = {
-        let mut indices =
-            Vec::with_capacity(side_length * (line_count * 2 + 1) - 1);
-        let side_length = side_length as u32;
-        let line_count = line_count as u32;
-        for x in 0..side_length {
-            if x != 0 {
-                indices.push(restart);
-            }
-            for y in 0..line_count {
-                indices.push(x * line_count + y);
-                indices.push(x * line_count + y + line_count);
-            }
-        }
-        assert_eq!(indices.len(), indices.capacity());
-        indices
-    };
-
-    TessBuilder::new(context)
-        .set_mode(Mode::TriangleStrip)
-        .set_primitive_restart_index(Some(restart))
-        .set_vertex_nb(indices.len())
-        .set_indices(indices)
-        .build()
-        .unwrap()
-}
 
 fn main() {
     let context = &mut context::SdlContext::new(800, 600);

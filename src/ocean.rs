@@ -43,7 +43,7 @@ impl Ocean {
             include_str!("../shaders/ocean.vert"),
             include_str!("../shaders/ocean.frag"),
         );
-        let tess = crate::attributeless_grid(context, 0x100);
+        let tess = crate::grid::grid(context, 0x100);
 
         Self {
             h0k,
