@@ -45,6 +45,7 @@ impl H0k {
         let framebuffer =
             Framebuffer::new(context, size, 0).expect("framebuffer creation");
         let shader = crate::shader::from_strings(
+            None,
             QUAD_VS_SRC,
             include_str!("./shaders/h0k.frag"),
         );
@@ -146,6 +147,7 @@ impl Hkt {
         let framebuffer =
             Framebuffer::new(context, size, 0).expect("framebuffer creation");
         let shader = crate::shader::from_strings(
+            None,
             QUAD_VS_SRC,
             include_str!("./shaders/hkt.frag"),
         );
@@ -287,11 +289,13 @@ impl Fft {
         let twiddle_indices = twiddle_indices(context);
 
         let butterfly_shader = crate::shader::from_strings(
+            None,
             QUAD_VS_SRC,
             include_str!("./shaders/butterfly.frag"),
         );
 
         let inversion_shader = crate::shader::from_strings(
+            None,
             QUAD_VS_SRC,
             include_str!("./shaders/inversion.frag"),
         );

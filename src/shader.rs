@@ -1,12 +1,16 @@
 use luminance::shader::program::{BuiltProgram, Program};
 
-pub fn from_strings<S, Out, Uni>(vert: &str, frag: &str) -> Program<S, Out, Uni>
+pub fn from_strings<S, Out, Uni>(
+    tess: Option<(&str, &str)>,
+    vert: &str,
+    frag: &str,
+) -> Program<S, Out, Uni>
 where
     S: luminance::vertex::Semantics,
     Uni: luminance::shader::program::UniformInterface,
 {
     let BuiltProgram { program, warnings } =
-        Program::from_strings(None, vert, None, frag).unwrap_or_else(|error| {
+        Program::from_strings(tess, vert, None, frag).unwrap_or_else(|error| {
             eprintln!("{}", error);
             panic!();
         });

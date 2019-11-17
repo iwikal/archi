@@ -60,8 +60,9 @@ impl Terrain {
             texture.upload(GenMipmaps::Yes, &pixels).unwrap();
             texture
         };
-        let tess = crate::grid::grid(context, 0x100);
+        let tess = crate::grid::strip_grid(context, 0x100);
         let shader = crate::shader::from_strings(
+            None,
             include_str!("./shaders/terrain.vert"),
             include_str!("./shaders/terrain.frag"),
         );

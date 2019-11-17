@@ -85,6 +85,7 @@ fn main() {
                 ocean_frame.render(
                     &pipeline,
                     &mut shader_gate,
+                    view,
                     view_projection,
                 );
 

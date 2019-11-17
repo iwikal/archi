@@ -40,10 +40,15 @@ impl Ocean {
         let heightmap_buffer = FftFramebuffer::new(context, [0x100, 0x100], 0)
             .expect("framebuffer creation");
         let shader = crate::shader::from_strings(
+            Some((
+                include_str!("./shaders/ocean.tesc"),
+                include_str!("./shaders/ocean.tese"),
+            )),
             include_str!("./shaders/ocean.vert"),
             include_str!("./shaders/ocean.frag"),
         );
-        let tess = crate::grid::grid(context, 0x100);
+
+        let tess = crate::grid::square_patch_grid(context, 0x100);
 
         Self {
             h0k,
@@ -80,7 +85,8 @@ impl<'a> OceanFrame<'a> {
         &self,
         pipeline: &Pipeline,
         shader_gate: &mut ShadingGate<impl GraphicsContext>,
-        view_projection: impl Into<M44>,
+        view: glm::Mat4,
+        view_projection: glm::Mat4,
     ) {
         let Self(Ocean {
             heightmap_buffer,
