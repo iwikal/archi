@@ -40,8 +40,8 @@ impl Ocean {
         let heightmap_buffer = FftFramebuffer::new(context, [0x100, 0x100], 0)
             .expect("framebuffer creation");
         let shader = crate::shader::from_strings(
-            include_str!("../shaders/ocean.vert"),
-            include_str!("../shaders/ocean.frag"),
+            include_str!("./shaders/ocean.vert"),
+            include_str!("./shaders/ocean.frag"),
         );
         let tess = crate::grid::grid(context, 0x100);
 

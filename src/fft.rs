@@ -9,7 +9,7 @@ use luminance::{
 };
 use luminance_derive::UniformInterface;
 
-const QUAD_VS_SRC: &str = include_str!("../shaders/quad.vert");
+const QUAD_VS_SRC: &str = include_str!("./shaders/quad.vert");
 
 #[derive(UniformInterface)]
 struct H0kInterface {
@@ -46,7 +46,7 @@ impl H0k {
             Framebuffer::new(context, size, 0).expect("framebuffer creation");
         let shader = crate::shader::from_strings(
             QUAD_VS_SRC,
-            include_str!("../shaders/h0k.frag"),
+            include_str!("./shaders/h0k.frag"),
         );
 
         use luminance::texture::{MagFilter, MinFilter, Sampler};
@@ -147,7 +147,7 @@ impl Hkt {
             Framebuffer::new(context, size, 0).expect("framebuffer creation");
         let shader = crate::shader::from_strings(
             QUAD_VS_SRC,
-            include_str!("../shaders/hkt.frag"),
+            include_str!("./shaders/hkt.frag"),
         );
 
         use luminance::texture::{MagFilter, MinFilter, Sampler};
@@ -288,12 +288,12 @@ impl Fft {
 
         let butterfly_shader = crate::shader::from_strings(
             QUAD_VS_SRC,
-            include_str!("../shaders/butterfly.frag"),
+            include_str!("./shaders/butterfly.frag"),
         );
 
         let inversion_shader = crate::shader::from_strings(
             QUAD_VS_SRC,
-            include_str!("../shaders/inversion.frag"),
+            include_str!("./shaders/inversion.frag"),
         );
 
         let size = [N, N];

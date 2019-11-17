@@ -62,8 +62,8 @@ impl Terrain {
         };
         let tess = crate::grid::grid(context, 0x100);
         let shader = crate::shader::from_strings(
-            include_str!("../shaders/terrain.vert"),
-            include_str!("../shaders/terrain.frag"),
+            include_str!("./shaders/terrain.vert"),
+            include_str!("./shaders/terrain.frag"),
         );
         Self {
             heightmap,

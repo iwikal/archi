@@ -40,8 +40,8 @@ pub struct Debugger {
 impl Debugger {
     pub fn new(context: &mut impl GraphicsContext) -> Self {
         let shader = crate::shader::from_strings(
-            include_str!("../shaders/framebuffer-debug.vert"),
-            include_str!("../shaders/framebuffer-debug.frag"),
+            include_str!("./shaders/framebuffer-debug.vert"),
+            include_str!("./shaders/framebuffer-debug.frag"),
         );
 
         let tess = TessBuilder::new(context)

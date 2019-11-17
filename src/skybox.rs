@@ -140,8 +140,8 @@ impl Skybox {
         };
 
         let shader = crate::shader::from_strings(
-            include_str!("../shaders/skybox.vert"),
-            include_str!("../shaders/skybox.frag"),
+            include_str!("./shaders/skybox.vert"),
+            include_str!("./shaders/skybox.frag"),
         );
 
         Self {
