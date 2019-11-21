@@ -99,7 +99,7 @@ impl Skybox {
                 .unwrap()
         };
 
-        let cubemap = {
+        let mut load_cubemap = || {
             let size = 2048;
             use luminance::texture::{CubeFace, GenMipmaps};
             let texture =
@@ -116,14 +116,15 @@ impl Skybox {
             ]
             .iter()
             {
+                let full_path = &path.join(filename);
                 let image =
-                    image::open(&path.join(filename)).unwrap_or_else(|e| {
-                        panic!("could not open {:?}: {}", path, e);
-                    });
+                    image::open(full_path).map_err(|e| {
+                        format!("could not open {:?}: {}", full_path, e)
+                    })?;
 
                 match image {
                     image::ImageRgb8(..) => (),
-                    _ => panic!("expected rgb8 ui format"),
+                    _ => return Err("expected rgb8 ui format".to_owned()),
                 }
 
                 texture
@@ -133,10 +134,18 @@ impl Skybox {
                         size,
                         &image.raw_pixels(),
                     )
-                    .unwrap();
+                    .map_err(|e| e.to_string())?;
             }
 
-            texture
+            Ok(texture)
+        };
+
+        let cubemap = match load_cubemap() {
+            Ok(cubemap) => cubemap,
+            Err(e) => {
+                eprintln!("error loading skybox: {}", e);
+                Texture::new(context, 1, 0, Default::default()).unwrap()
+            }
         };
 
         let shader = crate::shader::from_strings(
