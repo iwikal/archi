@@ -31,17 +31,19 @@ where
 fn compile_stage(ty: Type, src: &ShaderSource) -> Result<Stage, ()> {
     Stage::new(ty, src.body).map_err(|err| {
         eprintln!(r#""{}": {}"#, src.name, err);
-        ()
     })
 }
+
+type Stages = (Option<(Stage, Stage)>, Stage, Option<Stage>, Stage);
 
 fn compile_stages(
     tess: &Option<(ShaderSource, ShaderSource)>,
     vert: &ShaderSource,
     geom: &Option<ShaderSource>,
     frag: &ShaderSource,
-) -> Result<(Option<(Stage, Stage)>, Stage, Option<Stage>, Stage), ()> {
-    let tess = tess.as_ref()
+) -> Result<Stages, ()> {
+    let tess = tess
+        .as_ref()
         .map(|(control_source, eval_source)| {
             let tcs =
                 compile_stage(Type::TessellationControlShader, &control_source);
@@ -51,7 +53,8 @@ fn compile_stages(
         })
         .transpose();
     let vert = compile_stage(Type::VertexShader, vert);
-    let geom = geom.as_ref()
+    let geom = geom
+        .as_ref()
         .map(|src| compile_stage(Type::GeometryShader, &src))
         .transpose();
     let frag = compile_stage(Type::FragmentShader, frag);
@@ -69,13 +72,9 @@ where
     S: luminance::vertex::Semantics,
     Uni: luminance::shader::program::UniformInterface,
 {
-    let (
-        tess_stage,
-        vert_stage,
-        geom_stage,
-        frag_stage
-    ) = compile_stages(&tess, &vert, &geom, &frag)
-        .expect("aborting due to previous errors");
+    let (tess_stage, vert_stage, geom_stage, frag_stage) =
+        compile_stages(&tess, &vert, &geom, &frag)
+            .expect("aborting due to previous errors");
 
     let BuiltProgram { program, warnings } = Program::from_stages(
         tess_stage.as_ref().map(|(c, e)| (c, e)),
