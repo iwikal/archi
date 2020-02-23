@@ -43,7 +43,9 @@ impl H0k {
     pub fn new(context: &mut impl GraphicsContext) -> Self {
         let size = [N, N];
         let framebuffer =
-            Framebuffer::new(context, size, 0).expect("framebuffer creation");
+            Framebuffer::new(context, size, 0, Default::default())
+                .expect("framebuffer creation");
+
         let shader = crate::shader::from_strings(
             None,
             QUAD_VS_SRC,
@@ -100,7 +102,7 @@ impl H0k {
         } = self;
         builder.pipeline(
             framebuffer,
-            [1.0, 1.0, 0.0, 1.0],
+            &Default::default(),
             |pipeline, mut shader_gate| {
                 let bound_noise = pipeline.bind_texture(input_texture);
                 shader_gate.shade(shader, |iface, mut render_gate| {
@@ -111,13 +113,9 @@ impl H0k {
                     iface.intensity.update(self.intensity);
                     iface.direction.update(self.direction.into());
                     iface.l.update(self.l);
-                    use luminance::render_state::RenderState;
-                    render_gate.render(
-                        RenderState::default(),
-                        |mut tess_gate| {
-                            tess_gate.render(tess);
-                        },
-                    );
+                    render_gate.render(&Default::default(), |mut tess_gate| {
+                        tess_gate.render(tess);
+                    });
                 });
             },
         );
@@ -145,7 +143,8 @@ impl Hkt {
     pub fn new(context: &mut impl GraphicsContext) -> Self {
         let size = [N, N];
         let framebuffer =
-            Framebuffer::new(context, size, 0).expect("framebuffer creation");
+            Framebuffer::new(context, size, 0, Default::default())
+                .expect("framebuffer creation");
         let shader = crate::shader::from_strings(
             None,
             QUAD_VS_SRC,
@@ -184,20 +183,16 @@ impl Hkt {
         } = self;
         builder.pipeline(
             framebuffer,
-            [0.0, 0.0, 0.0, 1.0],
+            &Default::default(),
             |pipeline, mut shader_gate| {
                 let bound_noise = pipeline.bind_texture(input_texture);
                 shader_gate.shade(shader, |iface, mut render_gate| {
                     iface.input_texture.update(&bound_noise);
                     iface.n.update(N as i32);
                     iface.time.update(time);
-                    use luminance::render_state::RenderState;
-                    render_gate.render(
-                        RenderState::default(),
-                        |mut tess_gate| {
-                            tess_gate.render(tess);
-                        },
-                    );
+                    render_gate.render(&Default::default(), |mut tess_gate| {
+                        tess_gate.render(tess);
+                    });
                 });
             },
         );
@@ -303,7 +298,8 @@ impl Fft {
         let size = [N, N];
 
         let pingpong_buffer =
-            Framebuffer::new(context, size, 0).expect("framebuffer creation");
+            Framebuffer::new(context, size, 0, Default::default())
+                .expect("framebuffer creation");
 
         let tess = TessBuilder::new(context)
             .set_mode(Mode::TriangleStrip)
@@ -351,7 +347,7 @@ impl Fft {
 
                 builder.pipeline(
                     output,
-                    [1.0, 1.0, 0.0, 1.0],
+                    &Default::default(),
                     |pipeline, mut shader_gate| {
                         let bound_twiddle =
                             pipeline.bind_texture(twiddle_indices);
@@ -363,9 +359,8 @@ impl Fft {
                                 iface.input_texture.update(&bound_input);
                                 iface.stage.update(stage as i32);
                                 iface.direction.update(direction);
-                                use luminance::render_state::RenderState;
                                 render_gate.render(
-                                    RenderState::default(),
+                                    &Default::default(),
                                     |mut tess_gate| {
                                         tess_gate.render(tess);
                                     },
@@ -382,16 +377,15 @@ impl Fft {
             let output = buffers[1 - pingpong];
             builder.pipeline(
                 output,
-                [1.0, 1.0, 0.0, 1.0],
+                &Default::default(),
                 |pipeline, mut shader_gate| {
                     let bound_input = pipeline.bind_texture(input);
                     shader_gate.shade(
                         inversion_shader,
                         |iface, mut render_gate| {
                             iface.input_texture.update(&bound_input);
-                            use luminance::render_state::RenderState;
                             render_gate.render(
-                                RenderState::default(),
+                                &Default::default(),
                                 |mut tess_gate| {
                                     tess_gate.render(tess);
                                 },

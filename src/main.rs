@@ -73,9 +73,11 @@ fn main() {
 
         let ocean_frame = ocean.simulate(&mut builder, f_time);
 
+        let pipeline_state = luminance::pipeline::PipelineState::new()
+            .set_clear_color([0.1, 0.2, 0.3, 1.0]);
         builder.pipeline(
             &back_buffer,
-            [0.1, 0.2, 0.3, 1.0],
+            &pipeline_state,
             |pipeline, mut shader_gate| {
                 let view = camera.view();
                 let projection = camera.projection();

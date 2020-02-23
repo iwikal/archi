@@ -61,8 +61,7 @@ pub fn square_patch_grid(
     };
 
     TessBuilder::new(context)
-        .set_mode(Mode::Patch)
-        .set_patch_vertex_nb(4)
+        .set_mode(Mode::Patch(4))
         .set_vertex_nb(indices.len())
         .set_indices(indices)
         .build()

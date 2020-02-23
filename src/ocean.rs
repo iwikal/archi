@@ -37,8 +37,9 @@ impl Ocean {
         }
         let hkt = Hkt::new(context);
         let fft = Fft::new(context);
-        let heightmap_buffer = FftFramebuffer::new(context, [0x100, 0x100], 0)
-            .expect("framebuffer creation");
+        let heightmap_buffer =
+            FftFramebuffer::new(context, [0x100, 0x100], 0, Default::default())
+                .expect("framebuffer creation");
         let shader = crate::shader::from_strings(
             Some((
                 include_str!("./shaders/ocean.tesc"),
@@ -99,7 +100,7 @@ impl<'a> OceanFrame<'a> {
         shader_gate.shade(shader, |iface, mut render_gate| {
             iface.view_projection.update(view_projection.into());
             iface.heightmap.update(&heightmap);
-            render_gate.render(Default::default(), |mut tess_gate| {
+            render_gate.render(&Default::default(), |mut tess_gate| {
                 for x in -1..1 {
                     for y in -1..1 {
                         iface.offset.update([x as f32, y as f32]);

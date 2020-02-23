@@ -183,7 +183,7 @@ impl Skybox {
             };
             let state = RenderState::default()
                 .set_depth_test(DepthComparison::LessOrEqual);
-            render_gate.render(state, |mut tess_gate| {
+            render_gate.render(&state, |mut tess_gate| {
                 iface.view_projection.update(view_projection.into());
                 iface.cubemap.update(&bound_cubemap);
                 tess_gate.render(&self.tess);

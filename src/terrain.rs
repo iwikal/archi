@@ -4,7 +4,6 @@ use luminance::{
     linear::M44,
     pipeline::{BoundTexture, Pipeline, ShadingGate},
     pixel::{Floating, R32F},
-    render_state::RenderState,
     shader::program::{Program, Uniform},
     tess::Tess,
     texture::{Dim2, Flat, Texture},
@@ -87,7 +86,7 @@ impl Terrain {
         shader_gate.shade(shader, |iface, mut render_gate| {
             iface.view_projection.update(view_projection.into());
             iface.heightmap.update(&pipeline.bind_texture(heightmap));
-            render_gate.render(RenderState::default(), |mut tess_gate| {
+            render_gate.render(&Default::default(), |mut tess_gate| {
                 tess_gate.render(tess);
             });
         })
