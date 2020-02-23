@@ -1,13 +1,14 @@
 extern crate nalgebra_glm as glm;
 use luminance::{context::GraphicsContext, framebuffer::Framebuffer};
 
+mod shader;
+
 mod camera;
 mod context;
 mod debug;
 mod fft;
 mod grid;
 mod ocean;
-mod shader;
 mod skybox;
 mod terrain;
 
@@ -87,7 +88,6 @@ fn main() {
                 ocean_frame.render(
                     &pipeline,
                     &mut shader_gate,
-                    view,
                     view_projection,
                 );
 

@@ -2,25 +2,43 @@
 
 layout(vertices = 4) out;
 
-uniform int tesselation_factor;
-uniform float tesselation_slope;
-uniform float tesselation_shift;
-uniform vec3 camera_position;
+layout (location = 0) in vec2 inUV[];
+
+layout (location = 0) out vec2 outUV[];
+
+uniform int tessellation_factor = 200;
+uniform float tessellation_slope = 2.0;
+uniform float tessellation_shift = 0.01;
 
 float lod_factor(float dist) {
-  float level = tesselation_factor / pow(dist, tesselation_slope);
-  return max(0.0, level + tesselation_shift);
+  float level = tessellation_factor / pow(dist, tessellation_slope);
+  return max(0.0, level + tessellation_shift);
 }
+
+const int AB = 1;
+const int BC = 0;
+const int CD = 3;
+const int DA = 2;
 
 void main() {
   if (gl_InvocationID == 0) {
-    gl_TessLevelOuter[0] = 1;
-    gl_TessLevelOuter[1] = 1;
-    gl_TessLevelOuter[2] = 1;
-    gl_TessLevelOuter[3] = 1;
+    vec3 a = gl_in[0].gl_Position.xyz;
+    vec3 b = gl_in[1].gl_Position.xyz;
+    vec3 c = gl_in[2].gl_Position.xyz;
+    vec3 d = gl_in[3].gl_Position.xyz;
 
-    gl_TessLevelInner[0] = 1;
-    gl_TessLevelInner[1] = 1;
+    float dist_a_b = length(a + b) / 2.0;
+    float dist_b_c = length(b + c) / 2.0;
+    float dist_c_d = length(c + d) / 2.0;
+    float dist_d_a = length(d + a) / 2.0;
+
+    gl_TessLevelOuter[AB] = mix(1, gl_MaxTessGenLevel, lod_factor(dist_a_b));
+    gl_TessLevelOuter[BC] = mix(1, gl_MaxTessGenLevel, lod_factor(dist_b_c));
+    gl_TessLevelOuter[CD] = mix(1, gl_MaxTessGenLevel, lod_factor(dist_c_d));
+    gl_TessLevelOuter[DA] = mix(1, gl_MaxTessGenLevel, lod_factor(dist_d_a));
+
+    gl_TessLevelInner[0] = (gl_TessLevelOuter[BC] + gl_TessLevelOuter[DA]) / 2.0;
+    gl_TessLevelInner[1] = (gl_TessLevelOuter[AB] + gl_TessLevelOuter[CD]) / 2.0;	
   }
 
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;

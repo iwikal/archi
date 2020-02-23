@@ -11,6 +11,7 @@ use luminance_derive::UniformInterface;
 
 #[derive(UniformInterface)]
 pub struct OceanShaderInterface {
+    #[uniform(unbound)]
     heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
     view_projection: Uniform<M44>,
     offset: Uniform<[f32; 2]>,
@@ -40,13 +41,14 @@ impl Ocean {
         let heightmap_buffer =
             FftFramebuffer::new(context, [0x100, 0x100], 0, Default::default())
                 .expect("framebuffer creation");
-        let shader = crate::shader::from_strings(
+        let shader = crate::shader::from_sources(
             Some((
-                include_str!("./shaders/ocean.tesc"),
-                include_str!("./shaders/ocean.tese"),
+                crate::shader_source!("./shaders/ocean.tesc"),
+                crate::shader_source!("./shaders/ocean.tese"),
             )),
-            include_str!("./shaders/ocean.vert"),
-            include_str!("./shaders/ocean.frag"),
+            crate::shader_source!("./shaders/ocean.vert"),
+            Some(crate::shader_source!("./shaders/ocean.geom")),
+            crate::shader_source!("./shaders/ocean.frag"),
         );
 
         let tess = crate::grid::square_patch_grid(context, 0x100);
@@ -86,7 +88,6 @@ impl<'a> OceanFrame<'a> {
         &self,
         pipeline: &Pipeline,
         shader_gate: &mut ShadingGate<impl GraphicsContext>,
-        view: glm::Mat4,
         view_projection: glm::Mat4,
     ) {
         let Self(Ocean {

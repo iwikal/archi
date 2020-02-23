@@ -1,6 +1,6 @@
 #extension GL_ARB_tessellation_shader : enable
 
-layout(quads, equal_spacing, cw) in;
+layout(quads, fractional_odd_spacing, cw) in;
 
 void main() {
   // world position
