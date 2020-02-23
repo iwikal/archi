@@ -38,9 +38,7 @@ impl Ocean {
         }
         let hkt = Hkt::new(context);
         let fft = Fft::new(context);
-        let heightmap_buffer =
-            FftFramebuffer::new(context, [0x100, 0x100], 0, Default::default())
-                .expect("framebuffer creation");
+        let heightmap_buffer = crate::fft::fft_framebuffer(context);
         let shader = crate::shader::from_sources(
             Some((
                 crate::shader_source!("./shaders/ocean.tesc"),

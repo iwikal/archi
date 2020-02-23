@@ -271,6 +271,17 @@ struct InversionInterface {
 type FftTexture = Texture<Flat, Dim2, RGBA32F>;
 pub type FftFramebuffer = Framebuffer<Flat, Dim2, RGBA32F, ()>;
 
+pub fn fft_framebuffer(context: &mut impl GraphicsContext) -> FftFramebuffer {
+    use luminance::texture::{Sampler, Wrap};
+    let sampler = Sampler {
+        wrap_s: Wrap::Repeat,
+        wrap_t: Wrap::Repeat,
+        ..Default::default()
+    };
+    FftFramebuffer::new(context, [N, N], 0, sampler)
+        .expect("fft framebuffer creation")
+}
+
 pub struct Fft {
     twiddle_indices: TwiddleTexture,
     butterfly_shader: Program<(), (), ButterflyInterface>,

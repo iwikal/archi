@@ -1,3 +1,5 @@
+layout (location = 0) in vec2 uv;
+
 out vec4 frag;
 
 const vec3 light_dir = vec3(1.0, 0.25, 0.0);

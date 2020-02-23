@@ -1,4 +1,3 @@
-uniform sampler2D heightmap;
 uniform mat4 view;
 uniform mat4 view_projection;
 uniform vec2 offset;
@@ -6,7 +5,7 @@ uniform vec2 offset;
 const int N = 256;
 const float SCALE = 8.0;
 
-layout (location = 0) out vec2 outUV;
+layout (location = 0) out vec2 uv_out;
 
 vec3 position_at_coordinates(int x, int y) {
   vec2 position = vec2(x, y) + offset * N;
@@ -38,4 +37,5 @@ void main() {
   vec3 position = position_at_coordinates(x, y);
 
   gl_Position = view_projection * vec4(position, 1.0);
+  uv_out = vec2(x, y);
 }
