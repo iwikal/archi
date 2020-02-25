@@ -6,6 +6,7 @@ const int N = 256;
 const float SCALE = 8.0;
 
 layout (location = 0) out vec2 uv_out;
+layout (location = 1) out vec3 position_out;
 
 vec3 position_at_coordinates(int x, int y) {
   vec2 position = vec2(x, y) + offset * N;
@@ -38,4 +39,5 @@ void main() {
 
   gl_Position = view_projection * vec4(position, 1.0);
   uv_out = vec2(x, y);
+  position_out = position;
 }

@@ -5,6 +5,9 @@ layout(vertices = 4) out;
 layout (location = 0) in vec2 uv_in[];
 layout (location = 0) out vec2 uv_out[];
 
+layout (location = 1) in vec3 position_in[];
+layout (location = 1) out vec3 position_out[];
+
 uniform int tessellation_factor = 200;
 uniform float tessellation_slope = 2.0;
 uniform float tessellation_shift = 0.01;
@@ -42,4 +45,5 @@ void main() {
 
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
   uv_out[gl_InvocationID] = uv_in[gl_InvocationID];
+  position_out[gl_InvocationID] = position_in[gl_InvocationID];
 }

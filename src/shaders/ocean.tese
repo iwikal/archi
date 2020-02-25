@@ -9,6 +9,9 @@ const float SCALE = 8.0;
 layout (location = 0) in vec2 uv_in[gl_MaxPatchVertices];
 layout (location = 0) out vec2 uv_out;
 
+layout (location = 1) in vec3 position_in[gl_MaxPatchVertices];
+layout (location = 1) out vec3 position_out;
+
 vec2 interpolate(vec2 a, vec2 b, vec2 c, vec2 d) {
   return mix(
       mix(b, a, gl_TessCoord.x),
@@ -47,7 +50,16 @@ void main() {
       uv_in[2],
       uv_in[3]);
 
+  float height = texture(heightmap, uv_out).y;
+  height += texture(heightmap, uv_out / 0x100).y;
+
   gl_Position = grid_position;
-  gl_Position.y += texture(heightmap, uv_out).y;
-  gl_Position.y += 2.0 * texture(heightmap, uv_out / 0x100).y;
+  gl_Position.y += height;
+
+  position_out = interpolate(
+      position_in[0],
+      position_in[1],
+      position_in[2],
+      position_in[3]);
+  position_out.y += height;
 }

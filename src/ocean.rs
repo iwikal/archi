@@ -45,7 +45,7 @@ impl Ocean {
                 crate::shader_source!("./shaders/ocean.tese"),
             )),
             crate::shader_source!("./shaders/ocean.vert"),
-            Some(crate::shader_source!("./shaders/ocean.geom")),
+            None, // Some(crate::shader_source!("./shaders/ocean.geom")),
             crate::shader_source!("./shaders/ocean.frag"),
         );
 

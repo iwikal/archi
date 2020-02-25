@@ -117,10 +117,9 @@ impl Skybox {
             .iter()
             {
                 let full_path = &path.join(filename);
-                let image =
-                    image::open(full_path).map_err(|e| {
-                        format!("could not open {:?}: {}", full_path, e)
-                    })?;
+                let image = image::open(full_path).map_err(|e| {
+                    format!("could not open {:?}: {}", full_path, e)
+                })?;
 
                 match image {
                     image::ImageRgb8(..) => (),
