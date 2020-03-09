@@ -20,6 +20,13 @@ impl SdlContext {
             sdl.video().expect("Could not initialize video system");
         sdl.mouse().set_relative_mouse_mode(true);
 
+        let gl_attr = video_system.gl_attr();
+
+        gl_attr.set_context_major_version(3);
+        gl_attr.set_context_minor_version(3);
+        gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
+        gl_attr.set_context_flags().forward_compatible().set();
+
         let window = video_system
             .window("Hello", width, height)
             .opengl()
