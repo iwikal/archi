@@ -5,14 +5,14 @@ use sdl2;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct SdlContext {
+pub struct Context {
     pub sdl: sdl2::Sdl,
     pub window: sdl2::video::Window,
     _gl_context: sdl2::video::GLContext,
     state: Rc<RefCell<GraphicsState>>,
 }
 
-impl SdlContext {
+impl Context {
     pub fn new(width: u32, height: u32) -> Self {
         let sdl = sdl2::init().expect("Could not init sdl2");
 
@@ -52,7 +52,7 @@ impl SdlContext {
     }
 }
 
-unsafe impl GraphicsContext for SdlContext {
+unsafe impl GraphicsContext for Context {
     fn state(&self) -> &Rc<RefCell<GraphicsState>> {
         &self.state
     }

@@ -13,7 +13,7 @@ mod skybox;
 mod terrain;
 
 fn main() {
-    let context = &mut context::SdlContext::new(800, 600);
+    let context = &mut context::Context::new(800, 600);
 
     let (width, height) = context.window.size();
 
