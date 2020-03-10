@@ -7,6 +7,7 @@ mod camera;
 mod context;
 mod debug;
 mod fft;
+mod glerror;
 mod grid;
 mod ocean;
 mod skybox;
@@ -99,5 +100,7 @@ fn main() {
 
         context.window.gl_swap_window();
         previous_frame_start = current_frame_start;
+
+        glerror::assert_no_gl_error();
     }
 }
