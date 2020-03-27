@@ -48,6 +48,9 @@ fn main() {
                         break 'game_loop;
                     }
                 }
+                Event::MouseMotion { xrel, yrel, .. } => {
+                    camera.mouse_moved(xrel as f32, yrel as f32);
+                }
                 Event::Window { win_event, .. } => {
                     use sdl2::event::WindowEvent;
                     if let WindowEvent::SizeChanged(width, height) = win_event {
