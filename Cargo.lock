@@ -35,7 +35,6 @@ dependencies = [
  "nalgebra-glm 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "sdl2 0.32.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "tiny_ecs 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -179,11 +178,6 @@ dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "xml-rs 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "hashbrown"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "image"
@@ -649,15 +643,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tiny_ecs"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "hashbrown 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "vec_map 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "typenum"
 version = "1.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -670,11 +655,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "unicode-xid"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "vec_map"
-version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -724,7 +704,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum gif 0.10.3 (registry+https://github.com/rust-lang/crates.io-index)" = "471d90201b3b223f3451cd4ad53e34295f16a1df17b1edf3736d47761c3981af"
 "checksum gl 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a94edab108827d67608095e269cf862e60d920f144a5026d3dbcfd8b877fb404"
 "checksum gl_generator 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1a95dfc23a2b4a9a2f5ab41d194f8bfda3cabec42af4e39f08c339eb2a0c124d"
-"checksum hashbrown 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e1de41fb8dba9714efd92241565cdff73f78508c95697dd56787d3cba27e2353"
 "checksum image 0.22.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ee0665404aa0f2ad154021777b785878b0e5b1c1da030455abc3d9ed257c2c67"
 "checksum inflate 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "1cdb29978cc5797bd8dcc8e5bf7de604891df2a8dc576973d71a281e916db2ff"
 "checksum jpeg-decoder 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "c1aae18ffeeae409c6622c3b6a7ee49792a7e5a062eea1b135fbb74e301792ba"
@@ -778,11 +757,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum syn 0.15.44 (registry+https://github.com/rust-lang/crates.io-index)" = "9ca4b3b69a77cbe1ffc9e198781b7acb0c7365a883670e8f1c1bc66fba79a5c5"
 "checksum syn 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "66850e97125af79138385e9b88339cbcd037e3f28ceab8c5ad98e64f0f1f80bf"
 "checksum tiff 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d7b7c2cfc4742bd8a32f2e614339dd8ce30dbcf676bb262bd63a2327bc5df57d"
-"checksum tiny_ecs 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a41ae5db949b30278b7aafd789b1d0b0ebcfb163685fd5317eb7f7706024e9f9"
 "checksum typenum 1.11.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6d2783fe2d6b8c1101136184eb41be8b1ad379e4657050b8aaff0c79ee7575f9"
 "checksum unicode-xid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
 "checksum unicode-xid 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "826e7639553986605ec5979c7dd957c7895e93eabed50ab2ffa7f6128a75097c"
-"checksum vec_map 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "05c78687fb1a80548ae3250346c3db86a80a7cdd77bda190189f2d0a0987c81a"
 "checksum winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "8093091eeb260906a183e6ae1abdba2ef5ef2257a21801128899c3fc699229c6"
 "checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 "checksum winapi-x86_64-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"

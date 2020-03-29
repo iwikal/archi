@@ -14,7 +14,6 @@ luminance-derive = "*"
 nalgebra-glm = "*"
 rand = "*"
 sdl2 = "*"
-tiny_ecs = "*"
 
 [profile.dev]
 opt-level = 3
