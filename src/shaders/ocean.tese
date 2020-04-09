@@ -50,8 +50,8 @@ void main() {
       uv_in[2],
       uv_in[3]);
 
-  float height = texture(heightmap, uv_out).y;
-  height += texture(heightmap, uv_out / 0x100).y;
+  float height = 0.0;
+  height += texture(heightmap, uv_out).y;
 
   gl_Position = grid_position;
   gl_Position.y += height;

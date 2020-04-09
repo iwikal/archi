@@ -9,21 +9,24 @@ use luminance::{
 };
 use luminance_derive::UniformInterface;
 
-const N: u32 = 0x100;
-
-const QUAD_VS_SRC: &str = include_str!("./shaders/quad.vert");
+const QUAD_VS_SRC: crate::shader::ShaderSource =
+    crate::shader_source!("./shaders/quad.vert");
 
 type TwiddleTexture = Texture<Flat, Dim2, RGBA32F>;
 
-pub fn twiddle_indices(context: &mut impl GraphicsContext) -> TwiddleTexture {
+pub fn twiddle_indices(
+    context: &mut impl GraphicsContext,
+    n: u32,
+) -> TwiddleTexture {
     use luminance::texture::{MagFilter, MinFilter, Sampler};
     let mut sampler = Sampler::default();
     sampler.mag_filter = MagFilter::Nearest;
     sampler.min_filter = MinFilter::Nearest;
 
-    let bits = (N as f32).log2() as u32;
+    let nf = n as f32;
+    let bits = nf.log2() as u32;
     let width = bits;
-    let height = N;
+    let height = n;
     let texture = Texture::new(context, [width, height], 0, sampler).unwrap();
     {
         const TAU: f32 = std::f32::consts::PI * 2.0;
@@ -32,7 +35,6 @@ pub fn twiddle_indices(context: &mut impl GraphicsContext) -> TwiddleTexture {
         let mut pixels = Vec::with_capacity(length as usize);
         for y in 0..height {
             for x in 0..width {
-                let nf = N as f32;
                 let span = u32::pow(2, x);
 
                 let index = span * 2;
@@ -79,23 +81,30 @@ struct ButterflyInterface {
 struct InversionInterface {
     input_texture:
         Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
+    n: Uniform<u32>,
 }
 
 pub type FftTexture = Texture<Flat, Dim2, RGBA32F>;
 pub type FftFramebuffer = Framebuffer<Flat, Dim2, RGBA32F, ()>;
 
-pub fn fft_framebuffer(context: &mut impl GraphicsContext) -> FftFramebuffer {
-    use luminance::texture::{Sampler, Wrap};
+pub fn fft_framebuffer(
+    context: &mut impl GraphicsContext,
+    n: u32,
+) -> FftFramebuffer {
+    use luminance::texture::{MagFilter, MinFilter, Sampler, Wrap};
     let sampler = Sampler {
         wrap_s: Wrap::Repeat,
         wrap_t: Wrap::Repeat,
+        mag_filter: MagFilter::Linear,
+        min_filter: MinFilter::LinearMipmapLinear,
         ..Default::default()
     };
-    FftFramebuffer::new(context, [N, N], 0, sampler)
+    FftFramebuffer::new(context, [n, n], 0, sampler)
         .expect("fft framebuffer creation")
 }
 
 pub struct Fft {
+    width: u32,
     twiddle_indices: TwiddleTexture,
     butterfly_shader: Program<(), (), ButterflyInterface>,
     inversion_shader: Program<(), (), InversionInterface>,
@@ -104,23 +113,27 @@ pub struct Fft {
 }
 
 impl Fft {
-    pub fn new(context: &mut impl GraphicsContext) -> Self {
-        let twiddle_indices = twiddle_indices(context);
+    pub fn new(context: &mut impl GraphicsContext, width: u32) -> Self {
+        let twiddle_indices = twiddle_indices(context, width);
 
-        let butterfly_shader = crate::shader::from_strings(
+        let butterfly_shader = crate::shader::from_sources(
             None,
             QUAD_VS_SRC,
-            include_str!("./shaders/butterfly.frag"),
+            None,
+            crate::shader_source!("./shaders/butterfly.frag"),
         );
 
-        let inversion_shader = crate::shader::from_strings(
+        let inversion_shader = crate::shader::from_sources(
             None,
             QUAD_VS_SRC,
-            include_str!("./shaders/inversion.frag"),
+            None,
+            crate::shader_source!("./shaders/inversion.frag"),
         );
 
-        let pingpong_buffers =
-            [fft_framebuffer(context), fft_framebuffer(context)];
+        let pingpong_buffers = [
+            fft_framebuffer(context, width),
+            fft_framebuffer(context, width),
+        ];
 
         let tess = TessBuilder::new(context)
             .set_mode(Mode::TriangleStrip)
@@ -129,6 +142,7 @@ impl Fft {
             .unwrap();
 
         Self {
+            width,
             tess,
             twiddle_indices,
             butterfly_shader,
@@ -143,6 +157,7 @@ impl Fft {
         input_texture: &FftTexture,
     ) -> &'a FftTexture {
         let Self {
+            width,
             tess,
             twiddle_indices,
             butterfly_shader,
@@ -150,7 +165,7 @@ impl Fft {
             ..
         } = self;
 
-        let bits = (N as f32).log2() as usize;
+        let bits = (*width as f32).log2() as usize;
         let mut pingpong = bits % 2;
         let mut first_round = true;
 
@@ -203,6 +218,7 @@ impl Fft {
                         inversion_shader,
                         |iface, mut render_gate| {
                             iface.input_texture.update(&bound_input);
+                            iface.n.update(*width);
                             render_gate.render(
                                 &Default::default(),
                                 |mut tess_gate| {

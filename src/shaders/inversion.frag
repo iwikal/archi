@@ -1,7 +1,7 @@
 in vec2 uv;
 
 uniform sampler2D input_texture;
-uniform int n = 512;
+uniform uint n;
 
 out vec4 frag;
 

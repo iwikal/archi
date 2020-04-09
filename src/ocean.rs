@@ -1,17 +1,18 @@
 use luminance::{
     context::GraphicsContext,
+    framebuffer::Framebuffer,
     linear::M44,
     pipeline::{BoundTexture, Builder, Pipeline, ShadingGate},
-    pixel::{Floating, RGBA32F},
+    pixel::{Floating, RGB32F, RGBA32F},
     shader::program::{Program, Uniform},
     tess::Tess,
-    framebuffer::Framebuffer,
     tess::{Mode, TessBuilder},
     texture::{Dim2, Flat, GenMipmaps, Texture},
 };
 use luminance_derive::UniformInterface;
 
-const QUAD_VS_SRC: &str = include_str!("./shaders/quad.vert");
+const QUAD_VS_SRC: crate::shader::ShaderSource =
+    crate::shader_source!("./shaders/quad.vert");
 
 #[derive(UniformInterface)]
 struct H0kInterface {
@@ -39,7 +40,7 @@ struct H0k {
     l: f32, // capillary supress factor
 }
 
-const N: u32 = 0x100;
+const N: u32 = 0x400;
 
 impl H0k {
     pub fn new(context: &mut impl GraphicsContext) -> Self {
@@ -48,10 +49,11 @@ impl H0k {
             Framebuffer::new(context, size, 0, Default::default())
                 .expect("framebuffer creation");
 
-        let shader = crate::shader::from_strings(
+        let shader = crate::shader::from_sources(
             None,
             QUAD_VS_SRC,
-            include_str!("./shaders/h0k.frag"),
+            None,
+            crate::shader_source!("./shaders/h0k.frag"),
         );
 
         use luminance::texture::{MagFilter, MinFilter, Sampler};
@@ -147,10 +149,11 @@ impl Hkt {
         let framebuffer =
             Framebuffer::new(context, size, 0, Default::default())
                 .expect("framebuffer creation");
-        let shader = crate::shader::from_strings(
+        let shader = crate::shader::from_sources(
             None,
             QUAD_VS_SRC,
-            include_str!("./shaders/hkt.frag"),
+            None,
+            crate::shader_source!("./shaders/hkt.frag"),
         );
 
         use luminance::texture::{MagFilter, MinFilter, Sampler};
@@ -202,22 +205,100 @@ impl Hkt {
     }
 }
 
-
 #[derive(UniformInterface)]
 pub struct OceanShaderInterface {
     #[uniform(unbound)]
     heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
+    #[uniform(unbound)]
+    normalmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
     view_projection: Uniform<M44>,
     offset: Uniform<[f32; 2]>,
 }
 
 type OceanShader = Program<(), (), OceanShaderInterface>;
 
+#[derive(UniformInterface)]
+pub struct NormalShaderInterface {
+    #[uniform(unbound)]
+    heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
+}
+
+type NormalShader = Program<(), (), NormalShaderInterface>;
+type NormalFramebuffer = Framebuffer<Flat, Dim2, RGB32F, ()>;
+type NormalTexture = Texture<Flat, Dim2, RGB32F>;
+
+struct NormalGenerator {
+    tess: Tess,
+    shader: NormalShader,
+    framebuffer: NormalFramebuffer,
+}
+
+impl NormalGenerator {
+    fn new(context: &mut impl GraphicsContext) -> Self {
+        let shader = crate::shader::from_sources(
+            None,
+            QUAD_VS_SRC,
+            None,
+            crate::shader_source!("./shaders/ocean-normal.frag"),
+        );
+
+        let tess = TessBuilder::new(context)
+            .set_mode(Mode::TriangleStrip)
+            .set_vertex_nb(4)
+            .build()
+            .unwrap();
+
+        use luminance::texture::{MagFilter, MinFilter, Sampler, Wrap};
+        let sampler = Sampler {
+            wrap_s: Wrap::Repeat,
+            wrap_t: Wrap::Repeat,
+            mag_filter: MagFilter::Linear,
+            min_filter: MinFilter::LinearMipmapLinear,
+            ..Default::default()
+        };
+        let framebuffer = Framebuffer::new(context, [N, N], 0, sampler)
+            .expect("framebuffer creation");
+
+        Self {
+            shader,
+            tess,
+            framebuffer,
+        }
+    }
+
+    fn render(
+        &self,
+        builder: &mut Builder<impl GraphicsContext>,
+        heightmap: &H0kTexture,
+    ) -> &NormalTexture {
+        let Self {
+            framebuffer,
+            shader,
+            tess,
+            ..
+        } = self;
+        builder.pipeline(
+            framebuffer,
+            &Default::default(),
+            |pipeline, mut shader_gate| {
+                shader_gate.shade(shader, |iface, mut render_gate| {
+                    iface.heightmap.update(&pipeline.bind_texture(heightmap));
+                    render_gate.render(&Default::default(), |mut tess_gate| {
+                        tess_gate.render(tess);
+                    });
+                });
+            },
+        );
+        framebuffer.color_slot()
+    }
+}
+
 use crate::fft::{Fft, FftTexture};
 pub struct Ocean {
     h0k: H0k,
     hkt: Hkt,
     fft: Fft,
+    normal_generator: NormalGenerator,
     shader: OceanShader,
     tess: Tess,
 }
@@ -230,7 +311,7 @@ impl Ocean {
             h0k.render(&mut builder);
         }
         let hkt = Hkt::new(context);
-        let fft = Fft::new(context);
+        let fft = Fft::new(context, N);
         let shader = crate::shader::from_sources(
             Some((
                 crate::shader_source!("./shaders/ocean.tesc"),
@@ -241,6 +322,8 @@ impl Ocean {
             crate::shader_source!("./shaders/ocean.frag"),
         );
 
+        let normal_generator = NormalGenerator::new(context);
+
         let tess = crate::grid::square_patch_grid(context, 0x100);
 
         Self {
@@ -248,6 +331,7 @@ impl Ocean {
             hkt,
             fft,
             shader,
+            normal_generator,
             tess,
         }
     }
@@ -258,19 +342,26 @@ impl Ocean {
         time: f32,
     ) -> OceanFrame {
         let heightmap = {
-            self.hkt.render(builder, time, self.h0k.framebuffer.color_slot());
+            self.hkt
+                .render(builder, time, self.h0k.framebuffer.color_slot());
             self.fft.render(builder, self.hkt.framebuffer.color_slot())
         };
+        let normalmap = self.normal_generator.render(builder, heightmap);
+
         OceanFrame {
-            ocean: self,
+            shader: &self.shader,
+            tess: &self.tess,
             heightmap,
+            normalmap,
         }
     }
 }
 
-pub struct OceanFrame<'a>{
-    ocean: &'a Ocean,
+pub struct OceanFrame<'a> {
+    shader: &'a OceanShader,
+    tess: &'a Tess,
     heightmap: &'a FftTexture,
+    normalmap: &'a NormalTexture,
 }
 
 impl<'a> OceanFrame<'a> {
@@ -280,19 +371,19 @@ impl<'a> OceanFrame<'a> {
         shader_gate: &mut ShadingGate<impl GraphicsContext>,
         view_projection: glm::Mat4,
     ) {
-        let Self {
-            ocean: Ocean {
-                shader,
-                tess,
-                ..
-            },
+        let &Self {
+            shader,
+            tess,
             heightmap,
+            normalmap,
         } = self;
 
         let heightmap = pipeline.bind_texture(heightmap);
+        let normalmap = pipeline.bind_texture(normalmap);
         shader_gate.shade(shader, |iface, mut render_gate| {
             iface.view_projection.update(view_projection.into());
             iface.heightmap.update(&heightmap);
+            iface.normalmap.update(&normalmap);
             render_gate.render(&Default::default(), |mut tess_gate| {
                 for x in -1..1 {
                     for y in -1..1 {
