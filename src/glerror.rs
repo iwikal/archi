@@ -52,6 +52,7 @@ struct UserParam {
 }
 
 use gl::types::*;
+#[allow(unused)]
 extern "system" fn message_callback(
     source: GLenum,
     gltype: GLenum,
@@ -132,6 +133,7 @@ extern "system" fn message_callback(
     dbg!(message);
 }
 
+#[allow(unused)]
 pub fn debug_messages(minimum_severity: GlDebugSeverity) {
     unsafe {
         let user_param = Box::leak(Box::new(UserParam { minimum_severity }));
