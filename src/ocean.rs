@@ -40,7 +40,7 @@ struct H0k {
     l: f32, // capillary supress factor
 }
 
-const N: u32 = 0x400;
+const N: u32 = 0x200;
 
 impl H0k {
     pub fn new(context: &mut impl GraphicsContext) -> Self {

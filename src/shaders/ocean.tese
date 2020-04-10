@@ -49,6 +49,7 @@ void main() {
       uv_in[1],
       uv_in[2],
       uv_in[3]);
+  uv_out /= 2.0;
 
   float height = 0.0;
   height += texture(heightmap, uv_out).y;
