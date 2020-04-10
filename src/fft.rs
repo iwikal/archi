@@ -16,17 +16,17 @@ type TwiddleTexture = Texture<Flat, Dim2, RGBA32F>;
 
 pub fn twiddle_indices(
     context: &mut impl GraphicsContext,
-    n: u32,
+    size: u32,
 ) -> TwiddleTexture {
     use luminance::texture::{MagFilter, MinFilter, Sampler};
     let mut sampler = Sampler::default();
     sampler.mag_filter = MagFilter::Nearest;
     sampler.min_filter = MinFilter::Nearest;
 
-    let nf = n as f32;
+    let nf = size as f32;
     let bits = nf.log2() as u32;
     let width = bits;
-    let height = n;
+    let height = size;
     let texture = Texture::new(context, [width, height], 0, sampler).unwrap();
     {
         const TAU: f32 = std::f32::consts::PI * 2.0;
