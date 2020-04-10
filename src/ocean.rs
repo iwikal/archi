@@ -1,9 +1,10 @@
+use crate::normal::{NormalGenerator, NormalTexture};
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
     linear::M44,
     pipeline::{BoundTexture, Builder, Pipeline, ShadingGate},
-    pixel::{Floating, RGB32F, RGBA32F},
+    pixel::{Floating, RGBA32F},
     shader::program::{Program, Uniform},
     tess::Tess,
     tess::{Mode, TessBuilder},
@@ -217,88 +218,12 @@ pub struct OceanShaderInterface {
 
 type OceanShader = Program<(), (), OceanShaderInterface>;
 
-#[derive(UniformInterface)]
-pub struct NormalShaderInterface {
-    #[uniform(unbound)]
-    heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
-}
-
-type NormalShader = Program<(), (), NormalShaderInterface>;
-type NormalFramebuffer = Framebuffer<Flat, Dim2, RGB32F, ()>;
-type NormalTexture = Texture<Flat, Dim2, RGB32F>;
-
-struct NormalGenerator {
-    tess: Tess,
-    shader: NormalShader,
-    framebuffer: NormalFramebuffer,
-}
-
-impl NormalGenerator {
-    fn new(context: &mut impl GraphicsContext) -> Self {
-        let shader = crate::shader::from_sources(
-            None,
-            QUAD_VS_SRC,
-            None,
-            crate::shader_source!("./shaders/ocean-normal.frag"),
-        );
-
-        let tess = TessBuilder::new(context)
-            .set_mode(Mode::TriangleStrip)
-            .set_vertex_nb(4)
-            .build()
-            .unwrap();
-
-        use luminance::texture::{MagFilter, MinFilter, Sampler, Wrap};
-        let sampler = Sampler {
-            wrap_s: Wrap::Repeat,
-            wrap_t: Wrap::Repeat,
-            mag_filter: MagFilter::Linear,
-            min_filter: MinFilter::LinearMipmapLinear,
-            ..Default::default()
-        };
-        let framebuffer = Framebuffer::new(context, [N, N], 0, sampler)
-            .expect("framebuffer creation");
-
-        Self {
-            shader,
-            tess,
-            framebuffer,
-        }
-    }
-
-    fn render(
-        &self,
-        builder: &mut Builder<impl GraphicsContext>,
-        heightmap: &H0kTexture,
-    ) -> &NormalTexture {
-        let Self {
-            framebuffer,
-            shader,
-            tess,
-            ..
-        } = self;
-        builder.pipeline(
-            framebuffer,
-            &Default::default(),
-            |pipeline, mut shader_gate| {
-                shader_gate.shade(shader, |iface, mut render_gate| {
-                    iface.heightmap.update(&pipeline.bind_texture(heightmap));
-                    render_gate.render(&Default::default(), |mut tess_gate| {
-                        tess_gate.render(tess);
-                    });
-                });
-            },
-        );
-        framebuffer.color_slot()
-    }
-}
-
 use crate::fft::{Fft, FftTexture};
 pub struct Ocean {
     h0k: H0k,
     hkt: Hkt,
     fft: Fft,
-    normal_generator: NormalGenerator,
+    normal_generator: NormalGenerator<RGBA32F>,
     shader: OceanShader,
     tess: Tess,
 }
@@ -322,7 +247,7 @@ impl Ocean {
             crate::shader_source!("./shaders/ocean.frag"),
         );
 
-        let normal_generator = NormalGenerator::new(context);
+        let normal_generator = NormalGenerator::new(context, [N, N]);
 
         let tess = crate::grid::square_patch_grid(context, 0x100);
 
