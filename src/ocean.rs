@@ -1,4 +1,3 @@
-use crate::normal::{NormalGenerator, NormalTexture};
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
@@ -210,8 +209,6 @@ impl Hkt {
 pub struct OceanShaderInterface {
     #[uniform(unbound)]
     heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
-    #[uniform(unbound)]
-    normalmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
     view_projection: Uniform<M44>,
     offset: Uniform<[f32; 2]>,
 }
@@ -223,7 +220,6 @@ pub struct Ocean {
     h0k: H0k,
     hkt: Hkt,
     fft: Fft,
-    normal_generator: NormalGenerator<RGBA32F>,
     shader: OceanShader,
     tess: Tess,
 }
@@ -247,8 +243,6 @@ impl Ocean {
             crate::shader_source!("./shaders/ocean.frag"),
         );
 
-        let normal_generator = NormalGenerator::new(context, [N, N]);
-
         let tess = crate::grid::square_patch_grid(context, 0x100);
 
         Self {
@@ -256,7 +250,6 @@ impl Ocean {
             hkt,
             fft,
             shader,
-            normal_generator,
             tess,
         }
     }
@@ -271,13 +264,11 @@ impl Ocean {
                 .render(builder, time, self.h0k.framebuffer.color_slot());
             self.fft.render(builder, self.hkt.framebuffer.color_slot())
         };
-        let normalmap = self.normal_generator.render(builder, heightmap);
 
         OceanFrame {
             shader: &self.shader,
             tess: &self.tess,
             heightmap,
-            normalmap,
         }
     }
 }
@@ -286,7 +277,6 @@ pub struct OceanFrame<'a> {
     shader: &'a OceanShader,
     tess: &'a Tess,
     heightmap: &'a FftTexture,
-    normalmap: &'a NormalTexture,
 }
 
 impl<'a> OceanFrame<'a> {
@@ -300,15 +290,12 @@ impl<'a> OceanFrame<'a> {
             shader,
             tess,
             heightmap,
-            normalmap,
         } = self;
 
         let heightmap = pipeline.bind_texture(heightmap);
-        let normalmap = pipeline.bind_texture(normalmap);
         shader_gate.shade(shader, |iface, mut render_gate| {
             iface.view_projection.update(view_projection.into());
             iface.heightmap.update(&heightmap);
-            iface.normalmap.update(&normalmap);
             render_gate.render(&Default::default(), |mut tess_gate| {
                 for x in -1..1 {
                     for y in -1..1 {

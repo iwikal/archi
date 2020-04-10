@@ -9,7 +9,6 @@ mod debug;
 mod fft;
 mod glerror;
 mod grid;
-mod normal;
 mod ocean;
 mod skybox;
 mod terrain;
