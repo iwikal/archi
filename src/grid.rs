@@ -1,12 +1,8 @@
-use luminance::{
-    context::GraphicsContext,
-    tess::{Mode, Tess, TessBuilder},
-};
+use crate::context::Context;
+use luminance::tess::{Mode, Tess, TessBuilder};
+use luminance_gl::GL33;
 
-pub fn strip_grid(
-    context: &mut impl GraphicsContext,
-    side_length: usize,
-) -> Tess {
+pub fn strip_grid(context: &mut Context, side_length: usize) -> Tess<GL33> {
     let line_count = side_length + 1;
 
     let restart = u32::max_value();
@@ -29,18 +25,18 @@ pub fn strip_grid(
     };
 
     TessBuilder::new(context)
-        .set_mode(Mode::TriangleStrip)
-        .set_primitive_restart_index(Some(restart))
-        .set_vertex_nb(indices.len())
-        .set_indices(indices)
-        .build()
+        .and_then(|b| b.set_mode(Mode::TriangleStrip))
+        .and_then(|b| b.set_primitive_restart_index(Some(restart)))
+        .and_then(|b| b.set_vertex_nb(indices.len()))
+        .and_then(|b| b.set_indices(indices))
+        .and_then(|b| b.build())
         .unwrap()
 }
 
 pub fn square_patch_grid(
-    context: &mut impl GraphicsContext,
+    context: &mut Context,
     side_length: u32,
-) -> Tess {
+) -> Tess<GL33> {
     let indices = {
         let mut indices = Vec::with_capacity({
             let side_length = side_length as usize;
@@ -61,9 +57,9 @@ pub fn square_patch_grid(
     };
 
     TessBuilder::new(context)
-        .set_mode(Mode::Patch(4))
-        .set_vertex_nb(indices.len())
-        .set_indices(indices)
-        .build()
+        .and_then(|b| b.set_mode(Mode::Patch(4)))
+        .and_then(|b| b.set_vertex_nb(indices.len()))
+        .and_then(|b| b.set_indices(indices))
+        .and_then(|b| b.build())
         .unwrap()
 }

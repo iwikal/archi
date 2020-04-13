@@ -1,23 +1,24 @@
+use crate::context::Context;
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
-    linear::M44,
-    pipeline::{BoundTexture, Builder, Pipeline, ShadingGate},
+    pipeline::{Pipeline, PipelineGate, TextureBinding},
     pixel::{Floating, RGBA32F},
-    shader::program::{Program, Uniform},
+    shader::{Program, Uniform},
+    shading_gate::ShadingGate,
     tess::Tess,
     tess::{Mode, TessBuilder},
-    texture::{Dim2, Flat, GenMipmaps, Texture},
+    texture::{Dim2, GenMipmaps, Texture},
 };
 use luminance_derive::UniformInterface;
+use luminance_gl::GL33;
 
 const QUAD_VS_SRC: crate::shader::ShaderSource =
     crate::shader_source!("./shaders/quad.vert");
 
 #[derive(UniformInterface)]
 struct H0kInterface {
-    input_texture:
-        Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
+    input_texture: Uniform<TextureBinding<Dim2, Floating>>,
     n: Uniform<i32>,
     scale: Uniform<i32>,
     amplitude: Uniform<f32>,
@@ -26,13 +27,13 @@ struct H0kInterface {
     l: Uniform<f32>, // capillary supress factor
 }
 
-type H0kTexture = Texture<Flat, Dim2, RGBA32F>;
+type H0kTexture = Texture<GL33, Dim2, RGBA32F>;
 
 struct H0k {
-    tess: Tess,
-    input_texture: Texture<Flat, Dim2, RGBA32F>,
-    shader: Program<(), (), H0kInterface>,
-    framebuffer: Framebuffer<Flat, Dim2, RGBA32F, ()>,
+    tess: Tess<GL33>,
+    input_texture: Texture<GL33, Dim2, RGBA32F>,
+    shader: Program<GL33, (), (), H0kInterface>,
+    framebuffer: Framebuffer<GL33, Dim2, RGBA32F, ()>,
     scale: i32,
     amplitude: f32,
     intensity: f32, // wind speed
@@ -43,26 +44,28 @@ struct H0k {
 const N: u32 = 0x200;
 
 impl H0k {
-    pub fn new(context: &mut impl GraphicsContext) -> Self {
+    pub fn new(context: &mut Context) -> Self {
         let size = [N, N];
         let framebuffer =
             Framebuffer::new(context, size, 0, Default::default())
                 .expect("framebuffer creation");
 
         let shader = crate::shader::from_sources(
+            context,
             None,
             QUAD_VS_SRC,
             None,
             crate::shader_source!("./shaders/h0k.frag"),
         );
 
-        use luminance::texture::{MagFilter, MinFilter, Sampler};
-        let mut sampler = Sampler::default();
-        sampler.mag_filter = MagFilter::Nearest;
-        sampler.min_filter = MinFilter::Nearest;
+        let input_texture = {
+            use luminance::texture::{MagFilter, MinFilter, Sampler};
+            let mut sampler = Sampler::default();
+            sampler.mag_filter = MagFilter::Nearest;
+            sampler.min_filter = MinFilter::Nearest;
 
-        let input_texture = Texture::new(context, size, 0, sampler).unwrap();
-        {
+            let mut input_texture =
+                Texture::new(context, size, 0, sampler).unwrap();
             let length = N * N;
             let mut pixels = Vec::with_capacity(length as usize);
             let mut rng = rand::thread_rng();
@@ -72,12 +75,13 @@ impl H0k {
             }
 
             input_texture.upload(GenMipmaps::No, &pixels).unwrap();
-        }
+            input_texture
+        };
 
         let tess = TessBuilder::new(context)
-            .set_mode(Mode::TriangleStrip)
-            .set_vertex_nb(4)
-            .build()
+            .and_then(|b| b.set_mode(Mode::TriangleStrip))
+            .and_then(|b| b.set_vertex_nb(4))
+            .and_then(|b| b.build())
             .unwrap();
 
         Self {
@@ -94,31 +98,36 @@ impl H0k {
     }
 
     fn render(
-        &self,
-        builder: &mut Builder<impl GraphicsContext>,
-    ) -> &H0kTexture {
+        &mut self,
+        pipeline_gate: &mut PipelineGate<Context>,
+    ) -> &mut H0kTexture {
         let Self {
             framebuffer,
             input_texture,
             shader,
             tess,
+            scale,
+            amplitude,
+            intensity,
+            direction,
+            l,
             ..
         } = self;
-        builder.pipeline(
-            framebuffer,
+        pipeline_gate.pipeline(
+            &*framebuffer,
             &Default::default(),
             |pipeline, mut shader_gate| {
-                let bound_noise = pipeline.bind_texture(input_texture);
-                shader_gate.shade(shader, |iface, mut render_gate| {
-                    iface.input_texture.update(&bound_noise);
-                    iface.n.update(N as i32);
-                    iface.scale.update(self.scale);
-                    iface.amplitude.update(self.amplitude);
-                    iface.intensity.update(self.intensity);
-                    iface.direction.update(self.direction.into());
-                    iface.l.update(self.l);
+                let bound_noise = pipeline.bind_texture(input_texture).unwrap();
+                shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
+                    iface.set(&uni.input_texture, bound_noise.binding());
+                    iface.set(&uni.n, N as i32);
+                    iface.set(&uni.scale, *scale);
+                    iface.set(&uni.amplitude, *amplitude);
+                    iface.set(&uni.intensity, *intensity);
+                    iface.set(&uni.direction, (*direction).into());
+                    iface.set(&uni.l, *l);
                     render_gate.render(&Default::default(), |mut tess_gate| {
-                        tess_gate.render(tess);
+                        tess_gate.render(&*tess);
                     });
                 });
             },
@@ -129,27 +138,27 @@ impl H0k {
 
 #[derive(UniformInterface)]
 struct HktInterface {
-    input_texture:
-        Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
+    input_texture: Uniform<TextureBinding<Dim2, Floating>>,
     n: Uniform<i32>,
     time: Uniform<f32>,
 }
 
-type HktTexture = Texture<Flat, Dim2, RGBA32F>;
+type HktTexture = Texture<GL33, Dim2, RGBA32F>;
 
 struct Hkt {
-    tess: Tess,
-    shader: Program<(), (), HktInterface>,
-    framebuffer: Framebuffer<Flat, Dim2, RGBA32F, ()>,
+    tess: Tess<GL33>,
+    shader: Program<GL33, (), (), HktInterface>,
+    framebuffer: Framebuffer<GL33, Dim2, RGBA32F, ()>,
 }
 
 impl Hkt {
-    fn new(context: &mut impl GraphicsContext) -> Self {
+    fn new(context: &mut Context) -> Self {
         let size = [N, N];
         let framebuffer =
             Framebuffer::new(context, size, 0, Default::default())
                 .expect("framebuffer creation");
         let shader = crate::shader::from_sources(
+            context,
             None,
             QUAD_VS_SRC,
             None,
@@ -162,9 +171,9 @@ impl Hkt {
         sampler.min_filter = MinFilter::Nearest;
 
         let tess = TessBuilder::new(context)
-            .set_mode(Mode::TriangleStrip)
-            .set_vertex_nb(4)
-            .build()
+            .and_then(|b| b.set_mode(Mode::TriangleStrip))
+            .and_then(|b| b.set_vertex_nb(4))
+            .and_then(|b| b.build())
             .unwrap();
 
         Self {
@@ -175,10 +184,10 @@ impl Hkt {
     }
 
     fn render(
-        &self,
-        builder: &mut Builder<impl GraphicsContext>,
+        &mut self,
+        pipline_gate: &mut PipelineGate<Context>,
         time: f32,
-        input_texture: &H0kTexture,
+        input_texture: &mut H0kTexture,
     ) -> &HktTexture {
         let Self {
             framebuffer,
@@ -186,17 +195,18 @@ impl Hkt {
             tess,
             ..
         } = self;
-        builder.pipeline(
-            framebuffer,
+
+        pipline_gate.pipeline(
+            &framebuffer,
             &Default::default(),
             |pipeline, mut shader_gate| {
-                let bound_noise = pipeline.bind_texture(input_texture);
-                shader_gate.shade(shader, |iface, mut render_gate| {
-                    iface.input_texture.update(&bound_noise);
-                    iface.n.update(N as i32);
-                    iface.time.update(time);
+                let bound_noise = pipeline.bind_texture(input_texture).unwrap();
+                shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
+                    iface.set(&uni.input_texture, bound_noise.binding());
+                    iface.set(&uni.n, N as i32);
+                    iface.set(&uni.time, time);
                     render_gate.render(&Default::default(), |mut tess_gate| {
-                        tess_gate.render(tess);
+                        tess_gate.render(&*tess);
                     });
                 });
             },
@@ -208,12 +218,12 @@ impl Hkt {
 #[derive(UniformInterface)]
 pub struct OceanShaderInterface {
     #[uniform(unbound)]
-    heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
-    view_projection: Uniform<M44>,
+    heightmap: Uniform<TextureBinding<Dim2, Floating>>,
+    view_projection: Uniform<[[f32; 4]; 4]>,
     offset: Uniform<[f32; 2]>,
 }
 
-type OceanShader = Program<(), (), OceanShaderInterface>;
+type OceanShader = Program<GL33, (), (), OceanShaderInterface>;
 
 use crate::fft::{Fft, FftTexture};
 pub struct Ocean {
@@ -221,19 +231,17 @@ pub struct Ocean {
     hkt: Hkt,
     fft: Fft,
     shader: OceanShader,
-    tess: Tess,
+    tess: Tess<GL33>,
 }
 
 impl Ocean {
-    pub fn new(context: &mut impl GraphicsContext) -> Self {
-        let h0k = H0k::new(context);
-        {
-            let mut builder = context.pipeline_builder();
-            h0k.render(&mut builder);
-        }
+    pub fn new(context: &mut Context) -> Self {
+        let mut h0k = H0k::new(context);
+        h0k.render(&mut context.pipeline_gate());
         let hkt = Hkt::new(context);
         let fft = Fft::new(context, N);
         let shader = crate::shader::from_sources(
+            context,
             Some((
                 crate::shader_source!("./shaders/ocean.tesc"),
                 crate::shader_source!("./shaders/ocean.tese"),
@@ -256,51 +264,55 @@ impl Ocean {
 
     pub fn simulate(
         &mut self,
-        builder: &mut Builder<impl GraphicsContext>,
+        pipeline_gate: &mut PipelineGate<Context>,
         time: f32,
     ) -> OceanFrame {
         let heightmap = {
-            self.hkt
-                .render(builder, time, self.h0k.framebuffer.color_slot());
-            self.fft.render(builder, self.hkt.framebuffer.color_slot())
+            self.hkt.render(
+                pipeline_gate,
+                time,
+                self.h0k.framebuffer.color_slot(),
+            );
+            self.fft
+                .render(pipeline_gate, self.hkt.framebuffer.color_slot())
         };
 
         OceanFrame {
-            shader: &self.shader,
-            tess: &self.tess,
+            shader: &mut self.shader,
+            tess: &mut self.tess,
             heightmap,
         }
     }
 }
 
 pub struct OceanFrame<'a> {
-    shader: &'a OceanShader,
-    tess: &'a Tess,
-    heightmap: &'a FftTexture,
+    shader: &'a mut OceanShader,
+    tess: &'a mut Tess<GL33>,
+    heightmap: &'a mut FftTexture,
 }
 
 impl<'a> OceanFrame<'a> {
     pub fn render(
-        &self,
-        pipeline: &Pipeline,
-        shader_gate: &mut ShadingGate<impl GraphicsContext>,
+        &mut self,
+        pipeline: &Pipeline<GL33>,
+        shader_gate: &mut ShadingGate<Context>,
         view_projection: glm::Mat4,
     ) {
-        let &Self {
+        let Self {
             shader,
             tess,
             heightmap,
         } = self;
 
-        let heightmap = pipeline.bind_texture(heightmap);
-        shader_gate.shade(shader, |iface, mut render_gate| {
-            iface.view_projection.update(view_projection.into());
-            iface.heightmap.update(&heightmap);
+        let heightmap = pipeline.bind_texture(heightmap).unwrap();
+        shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
+            iface.set(&uni.view_projection, view_projection.into());
+            iface.set(&uni.heightmap, heightmap.binding());
             render_gate.render(&Default::default(), |mut tess_gate| {
                 for x in -1..1 {
                     for y in -1..1 {
-                        iface.offset.update([x as f32, y as f32]);
-                        tess_gate.render(tess);
+                        iface.set(&uni.offset, [x as f32, y as f32]);
+                        tess_gate.render(&**tess);
                     }
                 }
             });

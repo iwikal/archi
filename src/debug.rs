@@ -1,25 +1,27 @@
 #![allow(dead_code)]
 use luminance::{
     context::GraphicsContext,
-    linear::M44,
     pipeline::BoundTexture,
-    pixel::Floating,
-    shader::program::{Program, Uniform},
+    pixel::RGB32F,
+    shader::{Program, Uniform},
     tess::{Mode, Tess, TessBuilder},
-    texture::{Dim2, Flat},
+    texture::{Dim2},
 };
+use luminance_gl::GL33;
 use luminance_derive::UniformInterface;
+
+type M44 = [[f32; 4]; 4];
 
 #[derive(UniformInterface)]
 pub struct DebugShaderInterface {
     input_texture:
-        Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
+        Uniform<&'static BoundTexture<'static, GL33, Dim2, RGB32F>>,
     view_projection: Uniform<M44>,
     model: Uniform<M44>,
 }
 
 impl DebugShaderInterface {
-    pub fn set_texture(&self, t: &BoundTexture<'_, Flat, Dim2, Floating>) {
+    pub fn set_texture(&self, t: &BoundTexture<'_, GL33, Dim2, RGB32F>) {
         self.input_texture.update(t);
     }
 
@@ -33,8 +35,8 @@ impl DebugShaderInterface {
 }
 
 pub struct Debugger {
-    pub shader: Program<(), (), DebugShaderInterface>,
-    pub tess: Tess,
+    pub shader: Program<GL33, (), (), DebugShaderInterface>,
+    pub tess: Tess<GL33>,
 }
 
 impl Debugger {

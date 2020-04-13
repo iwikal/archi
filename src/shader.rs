@@ -1,22 +1,39 @@
-use luminance::shader::program::{BuiltProgram, Program};
-use luminance::shader::stage::{Stage, Type};
+use crate::context::Context;
+use luminance::context::GraphicsContext;
+use luminance::shader::{BuiltProgram, Program};
+use luminance::shader::{StageType, TessellationStages};
+use luminance_gl::GL33;
+
+type Stage = luminance::shader::Stage<GL33>;
 
 pub struct ShaderSource {
     pub name: &'static str,
     pub body: &'static str,
 }
 
-pub fn from_strings<S, Out, Uni>(
+fn tess_stages<'a, S: ?Sized>(
+    (control, evaluation): (&'a S, &'a S),
+) -> TessellationStages<'a, S> {
+    TessellationStages {
+        control,
+        evaluation,
+    }
+}
+
+pub fn from_strings<Sem, Out, Uni>(
+    context: &mut Context,
     tess: Option<(&str, &str)>,
     vert: &str,
     frag: &str,
-) -> Program<S, Out, Uni>
+) -> Program<GL33, Sem, Out, Uni>
 where
-    S: luminance::vertex::Semantics,
-    Uni: luminance::shader::program::UniformInterface,
+    Sem: luminance::vertex::Semantics,
+    Uni: luminance::shader::UniformInterface<GL33>,
 {
-    let BuiltProgram { program, warnings } =
-        Program::from_strings(tess, vert, None, frag).unwrap_or_else(|error| {
+    let BuiltProgram { program, warnings } = context
+        .new_shader_program()
+        .from_strings(vert, tess.map(tess_stages), None, frag)
+        .unwrap_or_else(|error| {
             eprintln!("{}", error);
             panic!("{:?}", (tess, vert, frag));
         });
@@ -28,8 +45,12 @@ where
     program
 }
 
-fn compile_stage(ty: Type, src: &ShaderSource) -> Result<Stage, ()> {
-    Stage::new(ty, src.body).map_err(|err| {
+fn compile_stage(
+    context: &mut Context,
+    ty: StageType,
+    src: &ShaderSource,
+) -> Result<Stage, ()> {
+    Stage::new(context, ty, src.body).map_err(|err| {
         eprintln!(r#""{}": {}"#, src.name, err);
     })
 }
@@ -37,65 +58,80 @@ fn compile_stage(ty: Type, src: &ShaderSource) -> Result<Stage, ()> {
 type Stages = (Option<(Stage, Stage)>, Stage, Option<Stage>, Stage);
 
 fn compile_stages(
-    tess: &Option<(ShaderSource, ShaderSource)>,
+    context: &mut Context,
+    tess: Option<(&ShaderSource, &ShaderSource)>,
     vert: &ShaderSource,
-    geom: &Option<ShaderSource>,
+    geom: Option<&ShaderSource>,
     frag: &ShaderSource,
 ) -> Result<Stages, ()> {
     let tess = tess
         .as_ref()
         .map(|(control_source, eval_source)| {
-            let tcs =
-                compile_stage(Type::TessellationControlShader, &control_source);
-            let tes =
-                compile_stage(Type::TessellationEvaluationShader, &eval_source);
+            let tcs = compile_stage(
+                context,
+                StageType::TessellationControlShader,
+                &control_source,
+            );
+            let tes = compile_stage(
+                context,
+                StageType::TessellationEvaluationShader,
+                &eval_source,
+            );
             Ok((tcs?, tes?))
         })
         .transpose();
-    let vert = compile_stage(Type::VertexShader, vert);
+    let vert = compile_stage(context, StageType::VertexShader, vert);
     let geom = geom
         .as_ref()
-        .map(|src| compile_stage(Type::GeometryShader, &src))
+        .map(|src| compile_stage(context, StageType::GeometryShader, &src))
         .transpose();
-    let frag = compile_stage(Type::FragmentShader, frag);
+    let frag = compile_stage(context, StageType::FragmentShader, frag);
 
     Ok((tess?, vert?, geom?, frag?))
 }
 
-pub fn from_sources<S, Out, Uni>(
+pub fn from_sources<Sem, Out, Uni>(
+    context: &mut Context,
     tess: Option<(ShaderSource, ShaderSource)>,
     vert: ShaderSource,
     geom: Option<ShaderSource>,
     frag: ShaderSource,
-) -> Program<S, Out, Uni>
+) -> Program<GL33, Sem, Out, Uni>
 where
-    S: luminance::vertex::Semantics,
-    Uni: luminance::shader::program::UniformInterface,
+    Sem: luminance::vertex::Semantics,
+    Uni: luminance::shader::UniformInterface<GL33>,
 {
-    let (tess_stage, vert_stage, geom_stage, frag_stage) =
-        compile_stages(&tess, &vert, &geom, &frag)
-            .expect("aborting due to previous errors");
-
-    let BuiltProgram { program, warnings } = Program::from_stages(
-        tess_stage.as_ref().map(|(c, e)| (c, e)),
-        &vert_stage,
-        geom_stage.as_ref(),
-        &frag_stage,
+    let (tess_stage, vert_stage, geom_stage, frag_stage) = compile_stages(
+        context,
+        tess.as_ref().map(|(c, s)| (c, s)),
+        &vert,
+        geom.as_ref(),
+        &frag,
     )
-    .unwrap_or_else(|error| {
-        eprintln!("failed to build program with stages:");
-        if let Some((control, eval)) = tess {
-            eprintln!("  tessellation control:    {}", control.name);
-            eprintln!("  tessellation evaluation: {}", eval.name);
-        }
-        eprintln!("  vertex stage:            {}", vert.name);
-        if let Some(geom) = geom {
-            eprintln!("  geometry stage:          {}", geom.name);
-        }
-        eprintln!("  fragment stage:          {}", frag.name);
-        eprintln!("{}", error);
-        panic!();
-    });
+    .expect("aborting due to previous errors");
+
+    let tess_stage: Option<TessellationStages<Stage>> =
+        tess_stage.as_ref().map(|(c, e)| tess_stages((c, e)));
+
+    let geom_stage: Option<&Stage> = geom_stage.as_ref();
+
+    let BuiltProgram { program, warnings } = context
+        .new_shader_program()
+        .from_stages(&vert_stage, tess_stage, geom_stage, &frag_stage)
+        .unwrap_or_else(|error| {
+            eprintln!("failed to build program with stages:");
+            if let Some((control, eval)) = tess {
+                eprintln!("  tessellation control:    {}", control.name);
+                eprintln!("  tessellation evaluation: {}", eval.name);
+            }
+            eprintln!("  vertex stage:            {}", vert.name);
+            if let Some(geom) = geom {
+                eprintln!("  geometry stage:          {}", geom.name);
+            }
+            eprintln!("  fragment stage:          {}", frag.name);
+            eprintln!("{}", error);
+            panic!();
+        });
 
     for warning in warnings {
         eprintln!("{}", warning);

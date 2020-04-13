@@ -1,29 +1,29 @@
+use crate::context::Context;
 use luminance::{
-    context::GraphicsContext,
-    linear::M44,
-    pipeline::{BoundTexture, Pipeline, ShadingGate},
+    pipeline::{Pipeline, TextureBinding},
     pixel::{NormRGB8UI, NormUnsigned},
-    shader::program::{Program, Uniform},
+    shader::{Program, Uniform},
+    shading_gate::ShadingGate,
     tess::Tess,
-    texture::{Cubemap, Flat, Texture},
+    texture::{Cubemap, Texture},
 };
 use luminance_derive::{Semantics, UniformInterface, Vertex};
+use luminance_gl::GL33;
 use std::path::Path;
 
 #[derive(UniformInterface)]
 pub struct SkyboxShaderInterface {
-    cubemap:
-        Uniform<&'static BoundTexture<'static, Flat, Cubemap, NormUnsigned>>,
-    view_projection: Uniform<M44>,
+    cubemap: Uniform<TextureBinding<Cubemap, NormUnsigned>>,
+    view_projection: Uniform<[[f32; 4]; 4]>,
 }
 
-type CubemapTexture = Texture<Flat, Cubemap, NormRGB8UI>;
+type CubemapTexture = Texture<GL33, Cubemap, NormRGB8UI>;
 
-type SkyboxShader = Program<(), (), SkyboxShaderInterface>;
+type SkyboxShader = Program<GL33, (), (), SkyboxShaderInterface>;
 
 pub struct Skybox {
     cubemap: CubemapTexture,
-    tess: Tess,
+    tess: Tess<GL33>,
     shader: SkyboxShader,
 }
 
@@ -44,10 +44,7 @@ struct CubeVertex {
 }
 
 impl Skybox {
-    pub fn new(
-        context: &mut impl GraphicsContext,
-        path: impl AsRef<Path>,
-    ) -> Self {
+    pub fn new(context: &mut Context, path: impl AsRef<Path>) -> Self {
         let tess = {
             use luminance::tess::{Mode, TessBuilder};
             let (vertices, indices) = {
@@ -92,17 +89,17 @@ impl Skybox {
             };
 
             TessBuilder::new(context)
-                .set_mode(Mode::Triangle)
-                .add_vertices(&vertices)
-                .set_indices(&indices)
-                .build()
+                .and_then(|b| b.set_mode(Mode::Triangle))
+                .and_then(|b| b.add_vertices(&vertices))
+                .and_then(|b| b.set_indices(&indices))
+                .and_then(|b| b.build())
                 .unwrap()
         };
 
         let mut load_cubemap = || {
             let size = 2048;
             use luminance::texture::{CubeFace, GenMipmaps};
-            let texture =
+            let mut texture =
                 Texture::new(context, size, 0, Default::default()).unwrap();
 
             let path = path.as_ref();
@@ -148,6 +145,7 @@ impl Skybox {
         };
 
         let shader = crate::shader::from_strings(
+            context,
             None,
             include_str!("./shaders/skybox.vert"),
             include_str!("./shaders/skybox.frag"),
@@ -161,12 +159,18 @@ impl Skybox {
     }
 
     pub fn render(
-        &self,
-        pipeline: &Pipeline,
-        shader_gate: &mut ShadingGate<impl GraphicsContext>,
+        &mut self,
+        pipeline: &Pipeline<GL33>,
+        shader_gate: &mut ShadingGate<Context>,
         view: glm::Mat4,
         projection: glm::Mat4,
     ) {
+        let Self {
+            shader,
+            cubemap,
+            tess,
+        } = self;
+
         let mut view = view;
 
         view[12] = 0.0;
@@ -175,17 +179,18 @@ impl Skybox {
 
         let view_projection = projection * view;
 
-        let bound_cubemap = pipeline.bind_texture(&self.cubemap);
-        shader_gate.shade(&self.shader, |iface, mut render_gate| {
+        let bound_cubemap = pipeline.bind_texture(cubemap).unwrap();
+        shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
             use luminance::{
                 depth_test::DepthComparison, render_state::RenderState,
             };
+            iface.set(&uni.view_projection, view_projection.into());
+            iface.set(&uni.cubemap, bound_cubemap.binding());
+
             let state = RenderState::default()
                 .set_depth_test(DepthComparison::LessOrEqual);
             render_gate.render(&state, |mut tess_gate| {
-                iface.view_projection.update(view_projection.into());
-                iface.cubemap.update(&bound_cubemap);
-                tess_gate.render(&self.tess);
+                tess_gate.render(&*tess);
             });
         })
     }

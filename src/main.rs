@@ -1,11 +1,11 @@
+use luminance::context::GraphicsContext;
 extern crate nalgebra_glm as glm;
-use luminance::{context::GraphicsContext, framebuffer::Framebuffer};
 
 mod shader;
 
 mod camera;
 mod context;
-mod debug;
+// mod debug;
 mod fft;
 mod glerror;
 mod grid;
@@ -13,20 +13,22 @@ mod ocean;
 mod skybox;
 mod terrain;
 
+pub use context::Context;
+
 fn main() {
-    let context = &mut context::Context::new(800, 600);
+    let context = &mut context::Context::new();
 
-    let (width, height) = context.window.size();
+    let (width, height) = context.surface.window().size();
 
-    let mut event_pump = context.sdl.event_pump().unwrap();
-    let mut back_buffer = Framebuffer::back_buffer(context, [width, height]);
+    let mut event_pump = context.surface.sdl().event_pump().unwrap();
+    let mut back_buffer = context.surface.back_buffer().unwrap();
 
     let mut camera =
         camera::Camera::persp(width as f32 / height as f32, 0.9, 0.1, 1000.0);
 
-    let skybox = skybox::Skybox::new(context, "/home/iwikal/poods");
+    let mut skybox = skybox::Skybox::new(context, "/home/iwikal/poods");
     let mut ocean = ocean::Ocean::new(context);
-    let terrain = terrain::Terrain::new(context, "assets/heightmap.png");
+    let mut terrain = terrain::Terrain::new(context, "assets/heightmap.png");
 
     use std::time::Instant;
     let start = Instant::now();
@@ -61,47 +63,57 @@ fn main() {
             }
         }
 
-        if let Some([width, height]) = resize {
-            let size = [width as u32, height as u32];
-            back_buffer = Framebuffer::back_buffer(context, size);
+        if let Some(_) = resize {
+            back_buffer = context.surface.back_buffer().unwrap();
         }
 
         camera.take_input(&event_pump);
         let delta_f = delta_t.as_micros() as f32 / 1_000_000.0;
         camera.physics_tick(delta_f);
 
-        let mut builder = context.pipeline_builder();
+        let mut pipeline_gate = context.pipeline_gate();
 
         let duration = current_frame_start - start;
         let f_time = duration.as_secs() as f32
             + duration.subsec_nanos() as f32 / 1_000_000_000.0;
 
-        let ocean_frame = ocean.simulate(&mut builder, f_time);
+        let mut ocean_frame = ocean.simulate(&mut pipeline_gate, f_time);
 
         let pipeline_state = luminance::pipeline::PipelineState::new()
             .set_clear_color([0.1, 0.2, 0.3, 1.0]);
-        builder.pipeline(
-            &back_buffer,
-            &pipeline_state,
-            |pipeline, mut shader_gate| {
-                let view = camera.view();
-                let projection = camera.projection();
+        pipeline_gate
+            .pipeline(
+                &back_buffer,
+                &pipeline_state,
+                |pipeline, mut shader_gate| {
+                    let view = camera.view();
+                    let projection = camera.projection();
 
-                let view_projection = projection * view;
+                    let view_projection = projection * view;
 
-                ocean_frame.render(
-                    &pipeline,
-                    &mut shader_gate,
-                    view_projection,
-                );
+                    ocean_frame.render(
+                        &pipeline,
+                        &mut shader_gate,
+                        view_projection,
+                    );
 
-                terrain.render(&pipeline, &mut shader_gate, view_projection);
+                    terrain.render(
+                        &pipeline,
+                        &mut shader_gate,
+                        view_projection,
+                    );
 
-                skybox.render(&pipeline, &mut shader_gate, view, projection);
-            },
-        );
+                    skybox.render(
+                        &pipeline,
+                        &mut shader_gate,
+                        view,
+                        projection,
+                    );
+                },
+            )
+            .unwrap();
 
-        context.window.gl_swap_window();
+        context.surface.window().gl_swap_window();
         previous_frame_start = current_frame_start;
 
         glerror::assert_no_gl_error();

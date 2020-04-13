@@ -9,11 +9,19 @@ edition = "2018"
 [dependencies]
 gl = "*"
 image = "*"
-luminance = "0.38"
-luminance-derive = "*"
+luminance = "0.40"
+luminance-gl = "0.14"
+luminance-derive = "0.6"
+luminance-sdl2 = "0.1"
 nalgebra-glm = "*"
 rand = "*"
 sdl2 = "*"
+
+[patch.crates-io]
+luminance = { path = "../forks/luminance-rs/luminance" }
+luminance-derive = { path = "../forks/luminance-rs/luminance-derive" }
+luminance-gl = { path = "../forks/luminance-rs/luminance-gl" }
+luminance-sdl2 = { path = "../forks/luminance-rs/luminance-sdl2" }
 
 [profile.dev]
 opt-level = 3

@@ -1,32 +1,47 @@
+use crate::context::Context;
 use image::GenericImageView;
 use luminance::{
-    context::GraphicsContext,
-    linear::M44,
-    pipeline::{BoundTexture, Pipeline, ShadingGate},
+    pipeline::{Pipeline, TextureBinding},
     pixel::{Floating, R32F},
-    shader::program::{Program, Uniform},
+    shader::{
+        Program, Uniform, UniformBuilder, UniformInterface, UniformWarning,
+    },
+    shading_gate::ShadingGate,
     tess::Tess,
-    texture::{Dim2, Flat, Texture},
+    texture::{Dim2, Texture},
 };
-use luminance_derive::UniformInterface;
+use luminance_gl::GL33;
 
-#[derive(UniformInterface)]
+type M44 = [[f32; 4]; 4];
+
 pub struct TerrainShaderInterface {
-    heightmap: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
+    heightmap: Uniform<TextureBinding<Dim2, Floating>>,
     view_projection: Uniform<M44>,
 }
 
-type TerrainShader = Program<(), (), TerrainShaderInterface>;
+impl UniformInterface<GL33, ()> for TerrainShaderInterface {
+    fn uniform_interface<'a>(
+        builder: &mut UniformBuilder<'a, GL33>,
+        _env: &mut (),
+    ) -> Result<Self, UniformWarning> {
+        Ok(TerrainShaderInterface {
+            heightmap: builder.ask("heightmap")?,
+            view_projection: builder.ask("view_projection")?,
+        })
+    }
+}
+
+type TerrainShader = Program<GL33, (), (), TerrainShaderInterface>;
 
 pub struct Terrain {
-    heightmap: Texture<Flat, Dim2, R32F>,
+    heightmap: Texture<GL33, Dim2, R32F>,
     shader: TerrainShader,
-    tess: Tess,
+    tess: Tess<GL33>,
 }
 
 impl Terrain {
     pub fn new(
-        context: &mut impl GraphicsContext,
+        context: &mut Context,
         heightmap: impl AsRef<std::path::Path>,
     ) -> Self {
         let heightmap = {
@@ -45,7 +60,7 @@ impl Terrain {
             let image =
                 image.resize_exact(0x100, 0x100, image::FilterType::Triangle);
             let size = [image.width(), image.height()];
-            let texture = Texture::new(context, size, 0, sampler).unwrap();
+            let mut texture = Texture::new(context, size, 0, sampler).unwrap();
 
             let pixels: Vec<f32> = image
                 .raw_pixels()
@@ -61,6 +76,7 @@ impl Terrain {
         };
         let tess = crate::grid::strip_grid(context, 0x100);
         let shader = crate::shader::from_strings(
+            context,
             None,
             include_str!("./shaders/terrain.vert"),
             include_str!("./shaders/terrain.frag"),
@@ -73,9 +89,9 @@ impl Terrain {
     }
 
     pub fn render(
-        &self,
-        pipeline: &Pipeline,
-        shader_gate: &mut ShadingGate<impl GraphicsContext>,
+        &mut self,
+        pipeline: &Pipeline<GL33>,
+        shader_gate: &mut ShadingGate<Context>,
         view_projection: impl Into<M44>,
     ) {
         let Self {
@@ -83,11 +99,14 @@ impl Terrain {
             shader,
             tess,
         } = self;
-        shader_gate.shade(shader, |iface, mut render_gate| {
-            iface.view_projection.update(view_projection.into());
-            iface.heightmap.update(&pipeline.bind_texture(heightmap));
+
+        let bound_heightmap = pipeline.bind_texture(heightmap).unwrap();
+
+        shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
+            iface.set(&uni.view_projection, view_projection.into());
+            iface.set(&uni.heightmap, bound_heightmap.binding());
             render_gate.render(&Default::default(), |mut tess_gate| {
-                tess_gate.render(tess);
+                tess_gate.render(&*tess);
             });
         })
     }
