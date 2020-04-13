@@ -178,37 +178,39 @@ impl Fft {
                     texture = freq_texture;
                 }
 
-                pipeline_gate.pipeline(
-                    out_buffer,
-                    &Default::default(),
-                    |pipeline, mut shader_gate| {
-                        let bound_twiddle =
-                            pipeline.bind_texture(twiddle_indices).unwrap();
-                        let bound_input =
-                            pipeline.bind_texture(texture).unwrap();
-                        shader_gate.shade(
-                            butterfly_shader,
-                            |mut iface, uni, mut render_gate| {
-                                iface.set(
-                                    &uni.twiddle_indices,
-                                    bound_twiddle.binding(),
-                                );
-                                iface.set(
-                                    &uni.input_texture,
-                                    bound_input.binding(),
-                                );
-                                iface.set(&uni.stage, stage as i32);
-                                iface.set(&uni.direction, direction);
-                                render_gate.render(
-                                    &Default::default(),
-                                    |mut tess_gate| {
-                                        tess_gate.render(&*tess);
-                                    },
-                                );
-                            },
-                        );
-                    },
-                );
+                pipeline_gate
+                    .pipeline(
+                        out_buffer,
+                        &Default::default(),
+                        |pipeline, mut shader_gate| {
+                            let bound_twiddle =
+                                pipeline.bind_texture(twiddle_indices).unwrap();
+                            let bound_input =
+                                pipeline.bind_texture(texture).unwrap();
+                            shader_gate.shade(
+                                butterfly_shader,
+                                |mut iface, uni, mut render_gate| {
+                                    iface.set(
+                                        &uni.twiddle_indices,
+                                        bound_twiddle.binding(),
+                                    );
+                                    iface.set(
+                                        &uni.input_texture,
+                                        bound_input.binding(),
+                                    );
+                                    iface.set(&uni.stage, stage as i32);
+                                    iface.set(&uni.direction, direction);
+                                    render_gate.render(
+                                        &Default::default(),
+                                        |mut tess_gate| {
+                                            tess_gate.render(&*tess);
+                                        },
+                                    );
+                                },
+                            );
+                        },
+                    )
+                    .unwrap();
 
                 pingpong_buffers = [out_buffer, in_buffer];
             }
@@ -218,27 +220,32 @@ impl Fft {
 
             let texture = in_buffer.color_slot();
 
-            pipeline_gate.pipeline(
-                out_buffer,
-                &Default::default(),
-                |pipeline, mut shader_gate| {
-                    let bound_input = pipeline.bind_texture(texture).unwrap();
-                    shader_gate.shade(
-                        inversion_shader,
-                        |mut iface, uni, mut render_gate| {
-                            iface
-                                .set(&uni.input_texture, bound_input.binding());
-                            iface.set(&uni.n, *width);
-                            render_gate.render(
-                                &Default::default(),
-                                |mut tess_gate| {
-                                    tess_gate.render(&*tess);
-                                },
-                            );
-                        },
-                    );
-                },
-            );
+            pipeline_gate
+                .pipeline(
+                    out_buffer,
+                    &Default::default(),
+                    |pipeline, mut shader_gate| {
+                        let bound_input =
+                            pipeline.bind_texture(texture).unwrap();
+                        shader_gate.shade(
+                            inversion_shader,
+                            |mut iface, uni, mut render_gate| {
+                                iface.set(
+                                    &uni.input_texture,
+                                    bound_input.binding(),
+                                );
+                                iface.set(&uni.n, *width);
+                                render_gate.render(
+                                    &Default::default(),
+                                    |mut tess_gate| {
+                                        tess_gate.render(&*tess);
+                                    },
+                                );
+                            },
+                        );
+                    },
+                )
+                .unwrap();
 
             out_buffer.color_slot()
         }

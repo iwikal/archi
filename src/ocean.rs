@@ -113,26 +113,40 @@ impl H0k {
             l,
             ..
         } = self;
-        pipeline_gate.pipeline(
-            &*framebuffer,
-            &Default::default(),
-            |pipeline, mut shader_gate| {
-                let bound_noise = pipeline.bind_texture(input_texture).unwrap();
-                shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
-                    iface.set(&uni.input_texture, bound_noise.binding());
-                    iface.set(&uni.n, N as i32);
-                    iface.set(&uni.scale, *scale);
-                    iface.set(&uni.amplitude, *amplitude);
-                    iface.set(&uni.intensity, *intensity);
-                    iface.set(&uni.direction, (*direction).into());
-                    iface.set(&uni.l, *l);
-                    render_gate.render(&Default::default(), |mut tess_gate| {
-                        tess_gate.render(&*tess);
-                    });
-                });
-            },
-        );
+        pipeline_gate
+            .pipeline(
+                &*framebuffer,
+                &Default::default(),
+                |pipeline, mut shader_gate| {
+                    let bound_noise =
+                        pipeline.bind_texture(input_texture).unwrap();
+                    shader_gate.shade(
+                        shader,
+                        |mut iface, uni, mut render_gate| {
+                            iface
+                                .set(&uni.input_texture, bound_noise.binding());
+                            iface.set(&uni.n, N as i32);
+                            iface.set(&uni.scale, *scale);
+                            iface.set(&uni.amplitude, *amplitude);
+                            iface.set(&uni.intensity, *intensity);
+                            iface.set(&uni.direction, (*direction).into());
+                            iface.set(&uni.l, *l);
+                            render_gate.render(
+                                &Default::default(),
+                                |mut tess_gate| {
+                                    tess_gate.render(&*tess);
+                                },
+                            );
+                        },
+                    );
+                },
+            )
+            .unwrap();
         framebuffer.color_slot()
+    }
+
+    fn into_texture(self) -> H0kTexture {
+        self.framebuffer.into_color_slot()
     }
 }
 
@@ -196,21 +210,31 @@ impl Hkt {
             ..
         } = self;
 
-        pipline_gate.pipeline(
-            &framebuffer,
-            &Default::default(),
-            |pipeline, mut shader_gate| {
-                let bound_noise = pipeline.bind_texture(input_texture).unwrap();
-                shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
-                    iface.set(&uni.input_texture, bound_noise.binding());
-                    iface.set(&uni.n, N as i32);
-                    iface.set(&uni.time, time);
-                    render_gate.render(&Default::default(), |mut tess_gate| {
-                        tess_gate.render(&*tess);
-                    });
-                });
-            },
-        );
+        pipline_gate
+            .pipeline(
+                &framebuffer,
+                &Default::default(),
+                |pipeline, mut shader_gate| {
+                    let bound_noise =
+                        pipeline.bind_texture(input_texture).unwrap();
+                    shader_gate.shade(
+                        shader,
+                        |mut iface, uni, mut render_gate| {
+                            iface
+                                .set(&uni.input_texture, bound_noise.binding());
+                            iface.set(&uni.n, N as i32);
+                            iface.set(&uni.time, time);
+                            render_gate.render(
+                                &Default::default(),
+                                |mut tess_gate| {
+                                    tess_gate.render(&*tess);
+                                },
+                            );
+                        },
+                    );
+                },
+            )
+            .unwrap();
         framebuffer.color_slot()
     }
 }
@@ -227,7 +251,7 @@ type OceanShader = Program<GL33, (), (), OceanShaderInterface>;
 
 use crate::fft::{Fft, FftTexture};
 pub struct Ocean {
-    h0k: H0k,
+    h0k_texture: H0kTexture,
     hkt: Hkt,
     fft: Fft,
     shader: OceanShader,
@@ -238,6 +262,8 @@ impl Ocean {
     pub fn new(context: &mut Context) -> Self {
         let mut h0k = H0k::new(context);
         h0k.render(&mut context.pipeline_gate());
+        let h0k_texture = h0k.into_texture();
+
         let hkt = Hkt::new(context);
         let fft = Fft::new(context, N);
         let shader = crate::shader::from_sources(
@@ -254,7 +280,7 @@ impl Ocean {
         let tess = crate::grid::square_patch_grid(context, 0x100);
 
         Self {
-            h0k,
+            h0k_texture,
             hkt,
             fft,
             shader,
@@ -268,11 +294,7 @@ impl Ocean {
         time: f32,
     ) -> OceanFrame {
         let heightmap = {
-            self.hkt.render(
-                pipeline_gate,
-                time,
-                self.h0k.framebuffer.color_slot(),
-            );
+            self.hkt.render(pipeline_gate, time, &mut self.h0k_texture);
             self.fft
                 .render(pipeline_gate, self.hkt.framebuffer.color_slot())
         };
