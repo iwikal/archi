@@ -29,6 +29,7 @@ name = "archi"
 version = "0.1.0"
 dependencies = [
  "gl 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hdrldr 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "image 0.22.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "luminance 0.40.0",
  "luminance-derive 0.6.0",
@@ -180,6 +181,11 @@ dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "xml-rs 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "hdrldr"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "image"
@@ -708,6 +714,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum gif 0.10.3 (registry+https://github.com/rust-lang/crates.io-index)" = "471d90201b3b223f3451cd4ad53e34295f16a1df17b1edf3736d47761c3981af"
 "checksum gl 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a94edab108827d67608095e269cf862e60d920f144a5026d3dbcfd8b877fb404"
 "checksum gl_generator 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1a95dfc23a2b4a9a2f5ab41d194f8bfda3cabec42af4e39f08c339eb2a0c124d"
+"checksum hdrldr 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b6cb717c5ebe824622289dc405a0415152ce835d162d43bf05fd902e394d5609"
 "checksum image 0.22.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ee0665404aa0f2ad154021777b785878b0e5b1c1da030455abc3d9ed257c2c67"
 "checksum inflate 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "1cdb29978cc5797bd8dcc8e5bf7de604891df2a8dc576973d71a281e916db2ff"
 "checksum jpeg-decoder 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "c1aae18ffeeae409c6622c3b6a7ee49792a7e5a062eea1b135fbb74e301792ba"

@@ -1,11 +1,11 @@
 use crate::context::Context;
 use luminance::{
     pipeline::{Pipeline, TextureBinding},
-    pixel::{NormRGB8UI, NormUnsigned},
+    pixel::{Floating, RGB32F},
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::Tess,
-    texture::{Cubemap, Texture},
+    texture::{Dim2, Texture},
 };
 use luminance_derive::{Semantics, UniformInterface, Vertex};
 use luminance_gl::GL33;
@@ -13,16 +13,17 @@ use std::path::Path;
 
 #[derive(UniformInterface)]
 pub struct SkyboxShaderInterface {
-    cubemap: Uniform<TextureBinding<Cubemap, NormUnsigned>>,
+    hdri: Uniform<TextureBinding<Dim2, Floating>>,
     view_projection: Uniform<[[f32; 4]; 4]>,
+    exposure: Uniform<f32>,
 }
 
-type CubemapTexture = Texture<GL33, Cubemap, NormRGB8UI>;
+type MapTexture = Texture<GL33, Dim2, RGB32F>;
 
 type SkyboxShader = Program<GL33, (), (), SkyboxShaderInterface>;
 
 pub struct Skybox {
-    cubemap: CubemapTexture,
+    hdri: MapTexture,
     tess: Tess<GL33>,
     shader: SkyboxShader,
 }
@@ -96,51 +97,49 @@ impl Skybox {
                 .unwrap()
         };
 
-        let mut load_cubemap = || {
-            let size = 2048;
-            use luminance::texture::{CubeFace, GenMipmaps};
-            let mut texture =
-                Texture::new(context, size, 0, Default::default()).unwrap();
-
+        let mut load_hdri = || -> Result<_, String> {
             let path = path.as_ref();
-            for &(face, filename) in [
-                (CubeFace::PositiveX, "positive_x.png"),
-                (CubeFace::PositiveY, "positive_y.png"),
-                (CubeFace::PositiveZ, "positive_z.png"),
-                (CubeFace::NegativeX, "negative_x.png"),
-                (CubeFace::NegativeY, "negative_y.png"),
-                (CubeFace::NegativeZ, "negative_z.png"),
-            ]
-            .iter()
-            {
-                let full_path = &path.join(filename);
-                let image = image::open(full_path).map_err(|e| {
-                    format!("could not open {:?}: {}", full_path, e)
-                })?;
+            let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
 
-                match image {
-                    image::ImageRgb8(..) => (),
-                    _ => return Err("expected rgb8 ui format".to_owned()),
-                }
+            let image = hdrldr::load(file).map_err(|e| {
+                let err_str = match e {
+                    hdrldr::LoadError::Io(e) => format!("{}", e),
+                    hdrldr::LoadError::FileFormat => {
+                        String::from("invalid file")
+                    }
+                    hdrldr::LoadError::Rle => {
+                        String::from("invalid run-length encoding")
+                    }
+                };
+                format!("could not load {}: {}", err_str, path.display())
+            })?;
 
-                texture
-                    .upload_part_raw(
-                        GenMipmaps::No,
-                        ([0, 0], face),
-                        size,
-                        &image.raw_pixels(),
-                    )
-                    .map_err(|e| e.to_string())?;
-            }
+            let mut texture = Texture::new(
+                context,
+                [image.width as u32, image.height as u32],
+                0,
+                Default::default(),
+            )
+            .unwrap();
+
+            let data: Vec<_> = image
+                .data
+                .into_iter()
+                .map(|hdrldr::RGB { r, g, b }| (r, g, b))
+                .collect();
+
+            texture
+                .upload(luminance::texture::GenMipmaps::Yes, &data)
+                .map_err(|e| e.to_string())?;
 
             Ok(texture)
         };
 
-        let cubemap = match load_cubemap() {
-            Ok(cubemap) => cubemap,
+        let hdri = match load_hdri() {
+            Ok(texture) => texture,
             Err(e) => {
                 eprintln!("error loading skybox: {}", e);
-                Texture::new(context, 1, 0, Default::default()).unwrap()
+                Texture::new(context, [1, 1], 0, Default::default()).unwrap()
             }
         };
 
@@ -151,11 +150,7 @@ impl Skybox {
             include_str!("./shaders/skybox.frag"),
         );
 
-        Self {
-            cubemap,
-            shader,
-            tess,
-        }
+        Self { hdri, shader, tess }
     }
 
     pub fn render(
@@ -164,12 +159,9 @@ impl Skybox {
         shader_gate: &mut ShadingGate<Context>,
         view: glm::Mat4,
         projection: glm::Mat4,
+        exposure: f32,
     ) {
-        let Self {
-            shader,
-            cubemap,
-            tess,
-        } = self;
+        let Self { shader, hdri, tess } = self;
 
         let mut view = view;
 
@@ -179,13 +171,14 @@ impl Skybox {
 
         let view_projection = projection * view;
 
-        let bound_cubemap = pipeline.bind_texture(cubemap).unwrap();
+        let bound_hdri = pipeline.bind_texture(hdri).unwrap();
         shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
             use luminance::{
                 depth_test::DepthComparison, render_state::RenderState,
             };
             iface.set(&uni.view_projection, view_projection.into());
-            iface.set(&uni.cubemap, bound_cubemap.binding());
+            iface.set(&uni.hdri, bound_hdri.binding());
+            iface.set(&uni.exposure, exposure);
 
             let state = RenderState::default()
                 .set_depth_test(DepthComparison::LessOrEqual);

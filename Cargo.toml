@@ -16,6 +16,7 @@ luminance-sdl2 = "0.1"
 nalgebra-glm = "*"
 rand = "*"
 sdl2 = "*"
+hdrldr = "*"
 
 [patch.crates-io]
 luminance = { path = "../forks/luminance-rs/luminance" }
@@ -23,5 +24,5 @@ luminance-derive = { path = "../forks/luminance-rs/luminance-derive" }
 luminance-gl = { path = "../forks/luminance-rs/luminance-gl" }
 luminance-sdl2 = { path = "../forks/luminance-rs/luminance-sdl2" }
 
-[profile.dev]
+[profile.dev.package."*"]
 opt-level = 3
