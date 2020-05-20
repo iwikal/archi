@@ -100,6 +100,8 @@ fn main() {
         let delta_f = delta_t.as_micros() as f32 / 1_000_000.0;
         camera.physics_tick(delta_f);
 
+        let skybox = &mut skyboxes[skybox_index];
+
         let mut pipeline_gate = context.pipeline_gate();
 
         let duration = current_frame_start - start;
@@ -127,6 +129,9 @@ fn main() {
                             &pipeline,
                             &mut shader_gate,
                             view_projection,
+                            camera.position(),
+                            skybox.texture(),
+                            exposure,
                         );
                     }
 
@@ -138,7 +143,7 @@ fn main() {
                         );
                     }
 
-                    skyboxes[skybox_index].render(
+                    skybox.render(
                         &pipeline,
                         &mut shader_gate,
                         view,

@@ -3,7 +3,7 @@ use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
     pipeline::{Pipeline, PipelineGate, TextureBinding},
-    pixel::{Floating, RGBA32F},
+    pixel::{Floating, RGBA32F, RGB32F},
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::Tess,
@@ -241,10 +241,13 @@ impl Hkt {
 
 #[derive(UniformInterface)]
 pub struct OceanShaderInterface {
-    #[uniform(unbound)]
     heightmap: Uniform<TextureBinding<Dim2, Floating>>,
     view_projection: Uniform<[[f32; 4]; 4]>,
     offset: Uniform<[f32; 2]>,
+
+    sky_texture: Uniform<TextureBinding<Dim2, Floating>>,
+    camera_pos: Uniform<[f32; 3]>,
+    exposure: Uniform<f32>,
 }
 
 type OceanShader = Program<GL33, (), (), OceanShaderInterface>;
@@ -319,6 +322,9 @@ impl<'a> OceanFrame<'a> {
         pipeline: &Pipeline<GL33>,
         shader_gate: &mut ShadingGate<Context>,
         view_projection: glm::Mat4,
+        camera_pos: glm::Vec3,
+        sky_texture: &mut Texture<GL33, Dim2, RGB32F>,
+        exposure: f32,
     ) {
         let Self {
             shader,
@@ -327,9 +333,16 @@ impl<'a> OceanFrame<'a> {
         } = self;
 
         let heightmap = pipeline.bind_texture(heightmap).unwrap();
+        let sky_texture = pipeline.bind_texture(sky_texture).unwrap();
+
         shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
             iface.set(&uni.view_projection, view_projection.into());
             iface.set(&uni.heightmap, heightmap.binding());
+
+            iface.set(&uni.camera_pos, camera_pos.into());
+            iface.set(&uni.sky_texture, sky_texture.binding());
+            iface.set(&uni.exposure, exposure);
+
             render_gate.render(&Default::default(), |mut tess_gate| {
                 for x in -1..1 {
                     for y in -1..1 {

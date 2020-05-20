@@ -97,6 +97,10 @@ impl Camera {
         self.projection
     }
 
+    pub fn position(&self) -> glm::Vec3 {
+        self.position
+    }
+
     pub fn view(&self) -> glm::Mat4 {
         glm::translate(&self.orientation, &-self.position)
     }

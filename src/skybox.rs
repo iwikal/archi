@@ -187,4 +187,8 @@ impl Skybox {
             });
         })
     }
+
+    pub fn texture(&mut self) -> &mut MapTexture {
+        &mut self.hdri
+    }
 }
