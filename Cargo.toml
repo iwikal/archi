@@ -8,21 +8,19 @@ edition = "2018"
 
 [dependencies]
 gl = "*"
-image = "*"
+image = "0.22"
 luminance = "0.40"
-luminance-gl = "0.14"
 luminance-derive = "0.6"
-luminance-sdl2 = "0.1"
+luminance-gl = "0.14"
 nalgebra-glm = "*"
 rand = "*"
-sdl2 = "*"
 hdrldr = "*"
-
-[patch.crates-io]
-luminance = { path = "../forks/luminance-rs/luminance" }
-luminance-derive = { path = "../forks/luminance-rs/luminance-derive" }
-luminance-gl = { path = "../forks/luminance-rs/luminance-gl" }
-luminance-sdl2 = { path = "../forks/luminance-rs/luminance-sdl2" }
+glutin = { version = "0.24", default-features = false }
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[patch.crates-io]
+luminance = { git = "https://github.com/phaazon/luminance-rs" }
+luminance-derive = { git = "https://github.com/phaazon/luminance-rs" }
+luminance-gl = { git = "https://github.com/phaazon/luminance-rs" }
