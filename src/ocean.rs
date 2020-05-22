@@ -3,7 +3,7 @@ use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
     pipeline::{Pipeline, PipelineGate, TextureBinding},
-    pixel::{Floating, RGBA32F, RGB32F},
+    pixel::{Floating, RGB32F, RGBA32F},
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::Tess,
@@ -89,8 +89,8 @@ impl H0k {
             input_texture,
             shader,
             framebuffer,
-            scale: 1000,
-            amplitude: 4.0,
+            scale: N as _,
+            amplitude: 1.0 / 8.0,
             intensity: 40.0, // wind speed
             direction: glm::vec2(1.0, 1.0),
             l: 0.5, // capillary supress factor

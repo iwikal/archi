@@ -29,8 +29,7 @@ fn main() {
         let aspect = width as f32 / height as f32;
         let fov = 1.1;
         let near = 0.1;
-        let far = 1000.0;
-        camera::Camera::persp(aspect, fov, near, far)
+        camera::Camera::persp(aspect, fov, near)
     };
 
     let mut skybox_index = 0;

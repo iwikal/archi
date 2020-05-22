@@ -24,8 +24,8 @@ impl Camera {
         }
     }
 
-    pub fn persp(aspect: f32, fov: f32, near: f32, far: f32) -> Self {
-        let projection = glm::perspective_rh(aspect, fov, near, far);
+    pub fn persp(aspect: f32, fov: f32, near: f32) -> Self {
+        let projection = glm::infinite_perspective_rh_no(aspect, fov, near);
         Self::new(projection)
     }
 
