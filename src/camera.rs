@@ -14,7 +14,7 @@ const SPEED: f32 = 50.0;
 impl Camera {
     fn new(projection: glm::Mat4) -> Self {
         Self {
-            position: glm::zero(),
+            position: glm::vec3(0.0, 1.0, 0.0),
             velocity: glm::zero(),
             acceleration: glm::zero(),
             pitch: 0.,

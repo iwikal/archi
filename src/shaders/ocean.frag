@@ -63,8 +63,12 @@ void main() {
   vec3 world_normal = sobel_normal();
   vec3 look_dir = normalize(camera_pos - position);
 
-  vec3 color = sky(reflect(-look_dir, world_normal));
+  vec3 reflection = sky(reflect(-look_dir, world_normal));
 
-  frag.rgb = color;
+  float fresnel = dot(look_dir, world_normal);
+  vec3 water_color = vec3(0.0, 0.1, 0.05);
+
+  frag.rgb = mix(reflection, water_color, fresnel);
+
   frag.a = 1.0;
 }

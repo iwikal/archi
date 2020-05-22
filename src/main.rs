@@ -48,7 +48,7 @@ fn main() {
 
     let mut exposure = 0.2;
 
-    let mut render_stuff = false;
+    let mut render_stuff = true;
 
     use std::time::Instant;
     let start = Instant::now();

@@ -90,7 +90,7 @@ impl H0k {
             shader,
             framebuffer,
             scale: N as _,
-            amplitude: 1.0 / 8.0,
+            amplitude: 1.0 / 2.0,
             intensity: 40.0, // wind speed
             direction: glm::vec2(1.0, 1.0),
             l: 0.5, // capillary supress factor
