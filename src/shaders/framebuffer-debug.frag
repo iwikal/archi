@@ -3,6 +3,7 @@ in vec2 uv;
 out vec4 frag;
 
 uniform sampler2D input_texture;
+uniform mat4 model;
 
 vec4 get_pixel(sampler2D sampler, ivec2 uv) {
   vec2 size = textureSize(sampler, 0);
@@ -10,6 +11,8 @@ vec4 get_pixel(sampler2D sampler, ivec2 uv) {
 }
 
 void main() {
+  vec3 position = model[3].xyz;
+
   vec2 size = textureSize(input_texture, 0);
-  frag = vec4(get_pixel(input_texture, ivec2(floor(uv * size))).xyz, 1.0);
+  frag = vec4(position, 1.0);
 }

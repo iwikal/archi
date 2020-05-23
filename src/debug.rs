@@ -1,58 +1,73 @@
 #![allow(dead_code)]
+use crate::context::Context;
 use luminance::{
     context::GraphicsContext,
-    pipeline::BoundTexture,
-    pixel::RGB32F,
+    pipeline::{Pipeline, TextureBinding},
+    pixel::{Floating, RGBA32F},
     shader::{Program, Uniform},
-    tess::{Mode, Tess, TessBuilder},
-    texture::{Dim2},
+    shading_gate::ShadingGate,
+    tess::{Mode, Tess},
+    texture::{Dim2, Texture},
 };
-use luminance_gl::GL33;
 use luminance_derive::UniformInterface;
+use luminance_gl::GL33;
 
 type M44 = [[f32; 4]; 4];
 
 #[derive(UniformInterface)]
 pub struct DebugShaderInterface {
-    input_texture:
-        Uniform<&'static BoundTexture<'static, GL33, Dim2, RGB32F>>,
+    #[uniform(unbound)]
+    input_texture: Uniform<TextureBinding<Dim2, Floating>>,
     view_projection: Uniform<M44>,
     model: Uniform<M44>,
 }
 
-impl DebugShaderInterface {
-    pub fn set_texture(&self, t: &BoundTexture<'_, GL33, Dim2, RGB32F>) {
-        self.input_texture.update(t);
-    }
-
-    pub fn set_model(&self, m: impl Into<M44>) {
-        self.model.update(m.into());
-    }
-
-    pub fn set_view_projection(&self, vp: impl Into<M44>) {
-        self.view_projection.update(vp.into());
-    }
-}
-
 pub struct Debugger {
-    pub shader: Program<GL33, (), (), DebugShaderInterface>,
-    pub tess: Tess<GL33>,
+    shader: Program<GL33, (), (), DebugShaderInterface>,
+    tess: Tess<GL33, ()>,
 }
 
 impl Debugger {
-    pub fn new(context: &mut impl GraphicsContext) -> Self {
+    pub fn new(context: &mut Context) -> Self {
         let shader = crate::shader::from_strings(
+            context,
             None,
             include_str!("./shaders/framebuffer-debug.vert"),
             include_str!("./shaders/framebuffer-debug.frag"),
         );
 
-        let tess = TessBuilder::new(context)
+        let tess = context
+            .new_tess()
             .set_mode(Mode::TriangleStrip)
             .set_vertex_nb(4)
             .build()
             .unwrap();
 
         Self { shader, tess }
+    }
+
+    pub fn render(
+        &mut self,
+        pipeline: &Pipeline<GL33>,
+        shader_gate: &mut ShadingGate<Context>,
+        view_projection: impl Into<M44>,
+        model: impl Into<M44>,
+        texture: Option<&mut Texture<GL33, Dim2, RGBA32F>>,
+    ) {
+        let Self { shader, tess } = self;
+
+        shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
+            iface.set(&uni.view_projection, view_projection.into());
+            iface.set(&uni.model, model.into());
+
+            if let Some(texture) = texture {
+                let bound_texture = pipeline.bind_texture(texture).unwrap();
+                iface.set(&uni.input_texture, bound_texture.binding());
+            }
+
+            render_gate.render(&Default::default(), |mut tess_gate| {
+                tess_gate.render(&*tess);
+            });
+        })
     }
 }

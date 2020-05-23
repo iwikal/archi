@@ -4,7 +4,7 @@ use luminance::{
     pixel::{Floating, RGB32F},
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
-    tess::Tess,
+    tess::{Mode, Tess, TessBuilder},
     texture::{Dim2, Texture},
 };
 use luminance_derive::{Semantics, UniformInterface, Vertex};
@@ -24,7 +24,7 @@ type SkyboxShader = Program<GL33, (), (), SkyboxShaderInterface>;
 
 pub struct Skybox {
     hdri: MapTexture,
-    tess: Tess<GL33>,
+    tess: Tess<GL33, CubeVertex, u32>,
     shader: SkyboxShader,
 }
 
@@ -36,7 +36,7 @@ pub enum Semantics {
     Uv,
 }
 
-#[derive(Vertex)]
+#[derive(Clone, Copy, Vertex)]
 #[vertex(sem = "Semantics")]
 #[allow(unused)]
 struct CubeVertex {
@@ -47,7 +47,6 @@ struct CubeVertex {
 impl Skybox {
     pub fn new(context: &mut Context, path: impl AsRef<Path>) -> Self {
         let tess = {
-            use luminance::tess::{Mode, TessBuilder};
             let (vertices, indices) = {
                 let n_vertices = 24;
                 let n_indices = 36;
@@ -90,10 +89,10 @@ impl Skybox {
             };
 
             TessBuilder::new(context)
-                .and_then(|b| b.set_mode(Mode::Triangle))
-                .and_then(|b| b.add_vertices(&vertices))
-                .and_then(|b| b.set_indices(&indices))
-                .and_then(|b| b.build())
+                .set_mode(Mode::Triangle)
+                .set_vertices(vertices)
+                .set_indices(indices)
+                .build()
                 .unwrap()
         };
 

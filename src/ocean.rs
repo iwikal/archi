@@ -6,8 +6,7 @@ use luminance::{
     pixel::{Floating, RGB32F, RGBA32F},
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
-    tess::Tess,
-    tess::{Mode, TessBuilder},
+    tess::{Mode, Tess},
     texture::{Dim2, GenMipmaps, Texture},
 };
 use luminance_derive::UniformInterface;
@@ -15,6 +14,15 @@ use luminance_gl::GL33;
 
 const QUAD_VS_SRC: crate::shader::ShaderSource =
     crate::shader_source!("./shaders/quad.vert");
+
+fn quad_tess(context: &mut Context) -> Tess<GL33, ()> {
+    context
+        .new_tess()
+        .set_mode(Mode::TriangleStrip)
+        .set_vertex_nb(4)
+        .build()
+        .unwrap()
+}
 
 #[derive(UniformInterface)]
 struct H0kInterface {
@@ -30,7 +38,7 @@ struct H0kInterface {
 type H0kTexture = Texture<GL33, Dim2, RGBA32F>;
 
 struct H0k {
-    tess: Tess<GL33>,
+    tess: Tess<GL33, ()>,
     input_texture: Texture<GL33, Dim2, RGBA32F>,
     shader: Program<GL33, (), (), H0kInterface>,
     framebuffer: Framebuffer<GL33, Dim2, RGBA32F, ()>,
@@ -78,11 +86,7 @@ impl H0k {
             input_texture
         };
 
-        let tess = TessBuilder::new(context)
-            .and_then(|b| b.set_mode(Mode::TriangleStrip))
-            .and_then(|b| b.set_vertex_nb(4))
-            .and_then(|b| b.build())
-            .unwrap();
+        let tess = quad_tess(context);
 
         Self {
             tess,
@@ -160,7 +164,7 @@ struct HktInterface {
 type HktTexture = Texture<GL33, Dim2, RGBA32F>;
 
 struct Hkt {
-    tess: Tess<GL33>,
+    tess: Tess<GL33, ()>,
     shader: Program<GL33, (), (), HktInterface>,
     framebuffer: Framebuffer<GL33, Dim2, RGBA32F, ()>,
 }
@@ -184,11 +188,7 @@ impl Hkt {
         sampler.mag_filter = MagFilter::Nearest;
         sampler.min_filter = MinFilter::Nearest;
 
-        let tess = TessBuilder::new(context)
-            .and_then(|b| b.set_mode(Mode::TriangleStrip))
-            .and_then(|b| b.set_vertex_nb(4))
-            .and_then(|b| b.build())
-            .unwrap();
+        let tess = quad_tess(context);
 
         Self {
             tess,
@@ -258,13 +258,13 @@ pub struct Ocean {
     hkt: Hkt,
     fft: Fft,
     shader: OceanShader,
-    tess: Tess<GL33>,
+    tess: Tess<GL33, (), u32>,
 }
 
 impl Ocean {
     pub fn new(context: &mut Context) -> Self {
         let mut h0k = H0k::new(context);
-        h0k.render(&mut context.pipeline_gate());
+        h0k.render(&mut context.new_pipeline_gate());
         let h0k_texture = h0k.into_texture();
 
         let hkt = Hkt::new(context);
@@ -312,7 +312,7 @@ impl Ocean {
 
 pub struct OceanFrame<'a> {
     shader: &'a mut OceanShader,
-    tess: &'a mut Tess<GL33>,
+    tess: &'a mut Tess<GL33, (), u32>,
     heightmap: &'a mut FftTexture,
 }
 

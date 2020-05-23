@@ -1,10 +1,11 @@
 use crate::context::Context;
 use luminance::{
+    context::GraphicsContext,
     framebuffer::Framebuffer,
     pipeline::{PipelineGate, TextureBinding},
     pixel::{Floating, RGBA32F},
     shader::{Program, Uniform},
-    tess::{Mode, Tess, TessBuilder},
+    tess::{Mode, Tess},
     texture::{Dim2, GenMipmaps, Texture},
 };
 use luminance_derive::UniformInterface;
@@ -101,7 +102,7 @@ pub struct Fft {
     butterfly_shader: Program<GL33, (), (), ButterflyInterface>,
     inversion_shader: Program<GL33, (), (), InversionInterface>,
     pingpong_buffers: [FftFramebuffer; 2],
-    tess: Tess<GL33>,
+    tess: Tess<GL33, ()>,
 }
 
 impl Fft {
@@ -129,10 +130,11 @@ impl Fft {
             fft_framebuffer(context, width),
         ];
 
-        let tess = TessBuilder::new(context)
-            .and_then(|b| b.set_mode(Mode::TriangleStrip))
-            .and_then(|b| b.set_vertex_nb(4))
-            .and_then(|b| b.build())
+        let tess = context
+            .new_tess()
+            .set_mode(Mode::TriangleStrip)
+            .set_vertex_nb(4)
+            .build()
             .unwrap();
 
         Self {

@@ -36,7 +36,7 @@ type TerrainShader = Program<GL33, (), (), TerrainShaderInterface>;
 pub struct Terrain {
     heightmap: Texture<GL33, Dim2, R32F>,
     shader: TerrainShader,
-    tess: Tess<GL33>,
+    tess: Tess<GL33, (), u32>,
 }
 
 impl Terrain {
@@ -57,8 +57,11 @@ impl Terrain {
             });
             let min = u32::min(image.width(), image.height());
             let image = image.crop(0, 0, min, min);
-            let image =
-                image.resize_exact(0x100, 0x100, image::FilterType::Triangle);
+            let image = image.resize_exact(
+                0x100,
+                0x100,
+                image::imageops::FilterType::Triangle,
+            );
             let size = [image.width(), image.height()];
             let mut texture = Texture::new(context, size, 0, sampler).unwrap();
 

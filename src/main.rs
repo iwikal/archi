@@ -1,50 +1,40 @@
-use luminance::context::GraphicsContext;
 extern crate nalgebra_glm as glm;
+
+use glutin::event::{
+    DeviceEvent, Event, KeyboardInput, VirtualKeyCode, WindowEvent,
+};
+use luminance::context::GraphicsContext;
 
 mod shader;
 
 mod camera;
 mod context;
-// mod debug;
+mod debug;
 mod fft;
 mod glerror;
 mod grid;
+mod input;
 mod ocean;
 mod skybox;
 mod terrain;
 
-pub use context::Context;
-
 fn main() {
     eprintln!("running!");
 
-    let context = &mut context::Context::new();
+    let event_loop = glutin::event_loop::EventLoop::new();
+    let mut context = context::Context::new(&event_loop);
 
-    let (width, height) = context.surface.window().size();
+    let [width, height] = context.size();
 
-    let mut event_pump = context.surface.sdl().event_pump().unwrap();
-    let mut back_buffer = context.surface.back_buffer().unwrap();
+    let mut back_buffer = context.back_buffer().unwrap();
 
-    let mut camera = {
-        let aspect = width as f32 / height as f32;
-        let fov = 1.1;
-        let near = 0.1;
-        camera::Camera::persp(aspect, fov, near)
-    };
+    let mut camera = camera::Camera::new(width, height);
 
-    let mut skybox_index = 0;
-
-    let mut skyboxes: Vec<_> = {
-        let paths = ["assets/colorful_studio_8k.hdr"];
-
-        paths
-            .iter()
-            .map(|path| skybox::Skybox::new(context, path))
-            .collect()
-    };
-
-    let mut ocean = ocean::Ocean::new(context);
-    let mut terrain = terrain::Terrain::new(context, "assets/heightmap.png");
+    let mut skybox =
+        skybox::Skybox::new(&mut context, "assets/colorful_studio_8k.hdr");
+    let mut ocean = ocean::Ocean::new(&mut context);
+    let mut terrain =
+        terrain::Terrain::new(&mut context, "assets/heightmap.png");
 
     let mut exposure = 0.2;
 
@@ -52,110 +42,151 @@ fn main() {
 
     use std::time::Instant;
     let start = Instant::now();
-    let mut previous_frame_start = start;
-    'game_loop: loop {
-        let current_frame_start = Instant::now();
-        let delta_t = current_frame_start - previous_frame_start;
+    let mut last_input_read = std::time::Instant::now();
 
-        let mut resize = None;
-        for event in event_pump.poll_iter() {
-            use sdl2::event::Event;
-            match event {
-                Event::Quit { .. } => {
-                    break 'game_loop;
-                }
-                Event::KeyDown { scancode, .. } => {
-                    use sdl2::keyboard::Scancode::*;
+    let mut input_state = input::InputState::default();
 
-                    match scancode {
-                        Some(Escape) => break 'game_loop,
-                        Some(E) => render_stuff = !render_stuff,
-                        Some(Num1) => skybox_index = 0,
-                        Some(Num2) => skybox_index = 1,
-                        _ => {}
-                    }
+    let mut debugger = debug::Debugger::new(&mut context);
+
+    event_loop.run(move |event, _, control_flow| {
+        *control_flow = glutin::event_loop::ControlFlow::Poll;
+
+        input_state.update(&event);
+
+        match event {
+            Event::NewEvents(..) => {
+                context.ctx.window().request_redraw();
+            }
+            Event::DeviceEvent { event, .. } => match event {
+                DeviceEvent::MouseMotion { delta: (x, y) } => {
+                    camera.mouse_moved(x as f32, y as f32);
                 }
-                Event::MouseMotion { xrel, yrel, .. } => {
-                    camera.mouse_moved(xrel as f32, yrel as f32);
-                }
-                Event::MouseWheel { y, .. } => {
-                    exposure *= 2.0_f32.powi(y);
-                }
-                Event::Window { win_event, .. } => {
-                    use sdl2::event::WindowEvent;
-                    if let WindowEvent::SizeChanged(width, height) = win_event {
-                        resize = Some([width, height]);
-                    }
+                DeviceEvent::MouseWheel { delta, .. } => {
+                    let y = match delta {
+                        glutin::event::MouseScrollDelta::LineDelta(_x, y) => {
+                            y / 10.0
+                        }
+                        glutin::event::MouseScrollDelta::PixelDelta(pos) => {
+                            pos.x as f32 / 100.0
+                        }
+                    };
+                    exposure *= 2.0_f32.powf(y);
                 }
                 _ => {}
+            },
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::Resized(..) => {
+                    back_buffer = context.back_buffer().unwrap();
+                    let [width, height] = context.size();
+                    camera.update_dimensions(width, height);
+                }
+                WindowEvent::CloseRequested
+                | WindowEvent::KeyboardInput {
+                    input:
+                        KeyboardInput {
+                            virtual_keycode: Some(VirtualKeyCode::Escape),
+                            ..
+                        },
+                    ..
+                } => {
+                    *control_flow = glutin::event_loop::ControlFlow::Exit;
+                }
+                _ => {}
+            },
+            Event::MainEventsCleared => {
+                let now = std::time::Instant::now();
+                let delta_t = now - last_input_read;
+                camera.take_input(&input_state);
+                let delta_f = delta_t.as_micros() as f32 / 1_000_000.0;
+                camera.physics_tick(delta_f);
+                last_input_read = now;
             }
+            Event::RedrawRequested(..) => {
+                let mut pipeline_gate = context.new_pipeline_gate();
+
+                let duration = std::time::Instant::now() - start;
+                let f_time = duration.as_secs_f32();
+
+                let mut ocean_frame = None;
+                if render_stuff {
+                    ocean_frame =
+                        Some(ocean.simulate(&mut pipeline_gate, f_time));
+                }
+
+                use luminance::pipeline::PipelineState;
+
+                pipeline_gate
+                    .pipeline(
+                        &back_buffer,
+                        &PipelineState::new()
+                            .set_clear_color([0.1, 0.2, 0.3, 1.0]),
+                        |pipeline, mut shader_gate| {
+                            let view = camera.view();
+                            let projection = camera.projection();
+
+                            let view_projection = projection * view;
+
+                            if let Some(mut ocean_frame) = ocean_frame {
+                                ocean_frame.render(
+                                    &pipeline,
+                                    &mut shader_gate,
+                                    view_projection,
+                                    camera.position(),
+                                    skybox.texture(),
+                                    exposure,
+                                );
+                            }
+
+                            if render_stuff {
+                                terrain.render(
+                                    &pipeline,
+                                    &mut shader_gate,
+                                    view_projection,
+                                );
+                            }
+
+                            for &pos in &[
+                                glm::vec3(0.0, 0.0, 0.0),
+                                glm::vec3(1.0, 0.0, 0.0),
+                                glm::vec3(-1.0, 0.0, 0.0),
+                                glm::vec3(0.0, 1.0, 0.0),
+                                glm::vec3(0.0, -1.0, 0.0),
+                                glm::vec3(0.0, 0.0, 1.0),
+                                glm::vec3(0.0, 0.0, -1.0),
+                            ] {
+                                let model: glm::Mat4 = glm::identity();
+                                let model = glm::translate(&model, &pos);
+                                let model = glm::scale(
+                                    &model,
+                                    &glm::vec3(0.2, 0.2, 0.2),
+                                );
+                                let model = model * camera.orientation();
+
+                                debugger.render(
+                                    &pipeline,
+                                    &mut shader_gate,
+                                    view_projection,
+                                    model,
+                                    None,
+                                );
+                            }
+
+                            skybox.render(
+                                &pipeline,
+                                &mut shader_gate,
+                                view,
+                                projection,
+                                exposure,
+                            );
+                        },
+                    )
+                    .unwrap();
+
+                context.swap_buffers();
+
+                glerror::assert_no_gl_error();
+            }
+            _ => {}
         }
-
-        if let Some(_) = resize {
-            back_buffer = context.surface.back_buffer().unwrap();
-        }
-
-        camera.take_input(&event_pump);
-        let delta_f = delta_t.as_micros() as f32 / 1_000_000.0;
-        camera.physics_tick(delta_f);
-
-        let skybox = &mut skyboxes[skybox_index];
-
-        let mut pipeline_gate = context.pipeline_gate();
-
-        let duration = current_frame_start - start;
-        let f_time = duration.as_secs_f32();
-
-        let mut ocean_frame = None;
-        if render_stuff {
-            ocean_frame = Some(ocean.simulate(&mut pipeline_gate, f_time));
-        }
-
-        use luminance::pipeline::PipelineState;
-
-        pipeline_gate
-            .pipeline(
-                &back_buffer,
-                &PipelineState::new().set_clear_color([0.1, 0.2, 0.3, 1.0]),
-                |pipeline, mut shader_gate| {
-                    let view = camera.view();
-                    let projection = camera.projection();
-
-                    let view_projection = projection * view;
-
-                    if let Some(mut ocean_frame) = ocean_frame {
-                        ocean_frame.render(
-                            &pipeline,
-                            &mut shader_gate,
-                            view_projection,
-                            camera.position(),
-                            skybox.texture(),
-                            exposure,
-                        );
-                    }
-
-                    if render_stuff {
-                        terrain.render(
-                            &pipeline,
-                            &mut shader_gate,
-                            view_projection,
-                        );
-                    }
-
-                    skybox.render(
-                        &pipeline,
-                        &mut shader_gate,
-                        view,
-                        projection,
-                        exposure,
-                    );
-                },
-            )
-            .unwrap();
-
-        context.surface.window().gl_swap_window();
-        previous_frame_start = current_frame_start;
-
-        glerror::assert_no_gl_error();
-    }
+    });
 }
