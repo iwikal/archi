@@ -91,6 +91,17 @@ fn main() {
                 } => {
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                 }
+                WindowEvent::KeyboardInput {
+                    input:
+                        KeyboardInput {
+                            scancode: 18,
+                            state: glutin::event::ElementState::Released,
+                            ..
+                        },
+                    ..
+                } => {
+                    render_stuff = !render_stuff;
+                }
                 _ => {}
             },
             Event::MainEventsCleared => {
