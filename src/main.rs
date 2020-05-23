@@ -43,6 +43,8 @@ fn main() {
 
     let mut debugger = debug::Debugger::new(&mut context);
 
+    context.ctx.window().set_visible(true);
+
     event_loop.run(move |event, _, control_flow| {
         *control_flow = glutin::event_loop::ControlFlow::Poll;
 

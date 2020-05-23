@@ -31,7 +31,7 @@ impl Context {
         // init OpenGL
         gl::load_with(|s| ctx.get_proc_address(s) as *const std::ffi::c_void);
 
-        ctx.window().set_visible(true);
+        ctx.window().set_cursor_visible(false);
 
         let gl = GL33::new().unwrap();
 
