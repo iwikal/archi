@@ -16,7 +16,6 @@ mod grid;
 mod input;
 mod ocean;
 mod skybox;
-mod terrain;
 
 fn main() {
     eprintln!("running!");
@@ -30,19 +29,15 @@ fn main() {
 
     let mut camera = camera::Camera::new(width, height);
 
-    let mut skybox =
-        skybox::Skybox::new(&mut context, "assets/colorful_studio_8k.hdr");
+    let mut skybox = skybox::Skybox::new(&mut context);
     let mut ocean = ocean::Ocean::new(&mut context);
-    let mut terrain =
-        terrain::Terrain::new(&mut context, "assets/heightmap.png");
 
     let mut exposure = 0.2;
 
     let mut render_stuff = true;
 
-    use std::time::Instant;
-    let start = Instant::now();
-    let mut last_input_read = std::time::Instant::now();
+    let start = std::time::Instant::now();
+    let mut last_input_read = start;
 
     let mut input_state = input::InputState::default();
 
@@ -113,15 +108,14 @@ fn main() {
                 last_input_read = now;
             }
             Event::RedrawRequested(..) => {
-                let mut pipeline_gate = context.new_pipeline_gate();
+                let now = std::time::Instant::now();
+                let t = (now - start).as_secs_f32();
 
-                let duration = std::time::Instant::now() - start;
-                let f_time = duration.as_secs_f32();
+                let mut pipeline_gate = context.new_pipeline_gate();
 
                 let mut ocean_frame = None;
                 if render_stuff {
-                    ocean_frame =
-                        Some(ocean.simulate(&mut pipeline_gate, f_time));
+                    ocean_frame = Some(ocean.simulate(&mut pipeline_gate, t));
                 }
 
                 use luminance::pipeline::PipelineState;
@@ -145,14 +139,6 @@ fn main() {
                                     camera.position(),
                                     skybox.texture(),
                                     exposure,
-                                );
-                            }
-
-                            if render_stuff {
-                                terrain.render(
-                                    &pipeline,
-                                    &mut shader_gate,
-                                    view_projection,
                                 );
                             }
 

@@ -9,7 +9,6 @@ use luminance::{
 };
 use luminance_derive::{Semantics, UniformInterface, Vertex};
 use luminance_gl::GL33;
-use std::path::Path;
 
 #[derive(UniformInterface)]
 pub struct SkyboxShaderInterface {
@@ -45,7 +44,7 @@ struct CubeVertex {
 }
 
 impl Skybox {
-    pub fn new(context: &mut Context, path: impl AsRef<Path>) -> Self {
+    pub fn new(context: &mut Context) -> Self {
         let tess = {
             let (vertices, indices) = {
                 let n_vertices = 24;
@@ -97,10 +96,10 @@ impl Skybox {
         };
 
         let mut load_hdri = || -> Result<_, String> {
-            let path = path.as_ref();
-            let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+            let bytes: &[u8] =
+                include_bytes!("../assets/colorful_studio_8k.hdr");
 
-            let image = hdrldr::load(file).map_err(|e| {
+            let image = hdrldr::load(bytes).map_err(|e| {
                 let err_str = match e {
                     hdrldr::LoadError::Io(e) => format!("{}", e),
                     hdrldr::LoadError::FileFormat => {
@@ -110,7 +109,7 @@ impl Skybox {
                         String::from("invalid run-length encoding")
                     }
                 };
-                format!("could not load {}: {}", err_str, path.display())
+                format!("could not load skybox: {}", err_str)
             })?;
 
             let mut texture = Texture::new(
