@@ -58,12 +58,12 @@ impl Camera {
         let length = if length > 1.0 { length } else { 1.0 };
         move_vector /= length;
 
-        self.acceleration =
-            { SPEED * glm::rotate_y_vec3(&move_vector, self.yaw) };
+        self.acceleration = SPEED * glm::rotate_y_vec3(&move_vector, self.yaw);
     }
 
     pub fn physics_tick(&mut self, delta_t: f32) {
-        self.velocity *= 0.99;
+        let friction: f32 = 100.0;
+        self.velocity *= (1. / friction).powf(delta_t);
         self.velocity += self.acceleration * delta_t;
         self.position += self.velocity * delta_t;
         self.acceleration = glm::zero();
