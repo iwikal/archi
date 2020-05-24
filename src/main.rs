@@ -1,3 +1,4 @@
+#[windows_subsystem = "windows"]
 extern crate nalgebra_glm as glm;
 
 use glutin::event::{
@@ -183,7 +184,7 @@ fn main() {
 
                 context.swap_buffers();
 
-                glerror::assert_no_gl_error();
+                glerror::print_gl_errors();
             }
             _ => {}
         }
