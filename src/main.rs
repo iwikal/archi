@@ -1,3 +1,4 @@
+#![feature(track_caller)]
 #[windows_subsystem = "windows"]
 extern crate nalgebra_glm as glm;
 
@@ -23,6 +24,8 @@ fn main() {
 
     let event_loop = glutin::event_loop::EventLoop::new();
     let mut context = context::Context::new(&event_loop);
+
+    glerror::debug_messages(glerror::GlDebugSeverity::Low);
 
     let [width, height] = context.size();
 

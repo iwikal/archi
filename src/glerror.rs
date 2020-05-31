@@ -30,13 +30,14 @@ pub fn print_gl_errors() -> bool {
     any_error
 }
 
+#[track_caller]
 pub fn assert_no_gl_error() {
     if print_gl_errors() {
         panic!("unexpected OpenGL errors")
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 #[repr(u32)]
 pub enum GlDebugSeverity {
@@ -44,6 +45,40 @@ pub enum GlDebugSeverity {
     Medium = gl::DEBUG_SEVERITY_MEDIUM,
     Low = gl::DEBUG_SEVERITY_LOW,
     Notification = gl::DEBUG_SEVERITY_NOTIFICATION,
+}
+
+use std::convert::TryInto;
+impl std::convert::TryFrom<GLenum> for GlDebugSeverity {
+    type Error = ();
+
+    fn try_from(value: GLenum) -> Result<Self, Self::Error> {
+        match value {
+            gl::DEBUG_SEVERITY_HIGH => Ok(Self::High),
+            gl::DEBUG_SEVERITY_MEDIUM => Ok(Self::Medium),
+            gl::DEBUG_SEVERITY_LOW => Ok(Self::Low),
+            gl::DEBUG_SEVERITY_NOTIFICATION => Ok(Self::Notification),
+            _ => Err(())
+        }
+    }
+}
+
+impl Ord for GlDebugSeverity {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let numeric = |&severity| match severity {
+            Self::High => 3,
+            Self::Medium => 2,
+            Self::Low => 1,
+            Self::Notification => 0,
+        };
+
+        numeric(self).cmp(&numeric(other))
+    }
+}
+
+impl PartialOrd for GlDebugSeverity {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -56,7 +91,7 @@ use gl::types::*;
 extern "system" fn message_callback(
     source: GLenum,
     gltype: GLenum,
-    id: GLuint,
+    _id: GLuint,
     severity: GLenum,
     length: GLsizei,
     message: *const GLchar,
@@ -64,18 +99,21 @@ extern "system" fn message_callback(
 ) {
     let UserParam { minimum_severity } = unsafe { *(user_param as *const _) };
 
-    if severity < minimum_severity as GLenum {
-        return;
-    }
+    let severity = match severity.try_into() {
+        Ok(severity) if severity >= minimum_severity => severity,
+        _ => {
+            return;
+        }
+    };
 
     let fallback;
     let source = match source {
-        gl::DEBUG_SOURCE_API => "GL_DEBUG_SOURCE_API",
-        gl::DEBUG_SOURCE_WINDOW_SYSTEM => "GL_DEBUG_SOURCE_WINDOW_SYSTEM",
-        gl::DEBUG_SOURCE_SHADER_COMPILER => "GL_DEBUG_SOURCE_SHADER_COMPILER",
-        gl::DEBUG_SOURCE_APPLICATION => "GL_DEBUG_SOURCE_APPLICATION",
-        gl::DEBUG_SOURCE_THIRD_PARTY => "GL_DEBUG_SOURCE_THIRD_PARTY",
-        gl::DEBUG_SOURCE_OTHER => "GL_DEBUG_SOURCE_OTHER",
+        gl::DEBUG_SOURCE_API => "API",
+        gl::DEBUG_SOURCE_WINDOW_SYSTEM => "window system",
+        gl::DEBUG_SOURCE_SHADER_COMPILER => "shader compiler",
+        gl::DEBUG_SOURCE_APPLICATION => "application",
+        gl::DEBUG_SOURCE_THIRD_PARTY => "third party",
+        gl::DEBUG_SOURCE_OTHER => "unspecified source",
         _ => {
             fallback = format!("Unknown message source {}", source);
             &fallback
@@ -84,33 +122,26 @@ extern "system" fn message_callback(
 
     let fallback;
     let gltype = match gltype {
-        gl::DEBUG_TYPE_ERROR => "GL_DEBUG_TYPE_ERROR",
-        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => {
-            "GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR"
-        }
-        gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => "GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR",
-        gl::DEBUG_TYPE_PORTABILITY => "GL_DEBUG_TYPE_PORTABILITY",
-        gl::DEBUG_TYPE_PERFORMANCE => "GL_DEBUG_TYPE_PERFORMANCE",
-        gl::DEBUG_TYPE_MARKER => "GL_DEBUG_TYPE_MARKER",
-        gl::DEBUG_TYPE_PUSH_GROUP => "GL_DEBUG_TYPE_PUSH_GROUP",
-        gl::DEBUG_TYPE_POP_GROUP => "GL_DEBUG_TYPE_POP_GROUP",
+        gl::DEBUG_TYPE_ERROR => "error",
+        gl::DEBUG_TYPE_DEPRECATED_BEHAVIOR => "deprecated behavior",
+        gl::DEBUG_TYPE_UNDEFINED_BEHAVIOR => "undefined behavior",
+        gl::DEBUG_TYPE_PORTABILITY => "portability",
+        gl::DEBUG_TYPE_PERFORMANCE => "performance",
+        gl::DEBUG_TYPE_MARKER => "marker",
+        gl::DEBUG_TYPE_PUSH_GROUP => "push debug group",
+        gl::DEBUG_TYPE_POP_GROUP => "pop debug group",
         gl::DEBUG_TYPE_OTHER => "GL_DEBUG_TYPE_OTHER",
         _ => {
-            fallback = format!("Unknown message type {}", gltype);
+            fallback = format!("{{Unknown message type {}}}", gltype);
             &fallback
         }
     };
 
-    let fallback;
     let severity = match severity {
-        gl::DEBUG_SEVERITY_HIGH => "GL_DEBUG_SEVERITY_HIGH",
-        gl::DEBUG_SEVERITY_MEDIUM => "GL_DEBUG_SEVERITY_MEDIUM",
-        gl::DEBUG_SEVERITY_LOW => "GL_DEBUG_SEVERITY_LOW",
-        gl::DEBUG_SEVERITY_NOTIFICATION => "GL_DEBUG_SEVERITY_NOTIFICATION",
-        _ => {
-            fallback = format!("Unknown message severity {}", gltype);
-            &fallback
-        }
+        GlDebugSeverity::High => "high",
+        GlDebugSeverity::Medium => "medium",
+        GlDebugSeverity::Low => "low",
+        GlDebugSeverity::Notification => "notification",
     };
 
     use std::ffi::*;
@@ -126,11 +157,13 @@ extern "system" fn message_callback(
         }
     };
 
-    dbg!(source);
-    dbg!(gltype);
-    dbg!(id);
-    dbg!(severity);
-    dbg!(message);
+    eprintln!(
+        "{} severity debug message about {} from {}: {}",
+        severity,
+        gltype,
+        source,
+        message.to_string_lossy(),
+    );
 }
 
 #[allow(unused)]
