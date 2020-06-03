@@ -265,7 +265,6 @@ impl Ocean {
     pub fn new(context: &mut Context) -> Self {
         let mut h0k = H0k::new(context);
         h0k.render(&mut context.new_pipeline_gate());
-        let h0k_texture = h0k.into_texture();
 
         let hkt = Hkt::new(context);
         let fft = Fft::new(context, N);
@@ -281,6 +280,8 @@ impl Ocean {
         );
 
         let tess = crate::grid::square_patch_grid(context, 0x100);
+
+        let h0k_texture = h0k.into_texture();
 
         Self {
             h0k_texture,
