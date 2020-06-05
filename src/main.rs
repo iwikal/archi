@@ -23,17 +23,53 @@ fn main() {
     eprintln!("running!");
 
     let event_loop = glutin::event_loop::EventLoop::new();
-    let mut context = context::Context::new(&event_loop);
+    let (mut context, mut surface) = context::Surface::new(&event_loop);
 
     glerror::debug_messages(glerror::GlDebugSeverity::Low);
 
-    let [width, height] = context.size();
+    let mut back_buffer = context.back_buffer(surface.size()).unwrap();
 
-    let mut back_buffer = context.back_buffer().unwrap();
-
+    let [width, height] = surface.size();
     let mut camera = camera::Camera::new(width, height);
 
-    let mut skybox = skybox::Skybox::new(&mut context);
+    let mut skybox = {
+        let (tx, rx) = std::sync::mpsc::sync_channel(1);
+
+        std::thread::spawn(move || {
+            let image = skybox::Skybox::load_image().unwrap_or_else(|e| {
+                eprintln!("{}", e);
+                Default::default()
+            });
+            tx.send(image).unwrap();
+        });
+
+        enum Lazy<T, F: FnMut(&mut context::Context) -> Option<T>> {
+            Pending(F),
+            Done(T),
+        }
+
+        impl<T, F: FnMut(&mut context::Context) -> Option<T>> Lazy<T, F> {
+            fn value(&mut self, context: &mut context::Context) -> Option<&mut T> {
+                match self {
+                    Self::Done(t) => Some(t),
+                    Self::Pending(f) => match f(context) {
+                        Some(t) => {
+                            *self = Self::Done(t);
+                            self.value(context)
+                        }
+                        None => None,
+                    }
+                }
+            }
+        }
+
+        Lazy::Pending(move |context| {
+            rx.try_recv()
+                .ok()
+                .map(|image| skybox::Skybox::new(context, image))
+        })
+    };
+
     let mut ocean = ocean::Ocean::new(&mut context);
 
     let mut exposure = 0.2;
@@ -47,7 +83,7 @@ fn main() {
 
     let mut debugger = debug::Debugger::new(&mut context);
 
-    context.ctx.window().set_visible(true);
+    surface.ctx.window().set_visible(true);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = glutin::event_loop::ControlFlow::Poll;
@@ -56,7 +92,7 @@ fn main() {
 
         match event {
             Event::NewEvents(..) => {
-                context.ctx.window().request_redraw();
+                surface.ctx.window().request_redraw();
             }
             Event::DeviceEvent { event, .. } => match event {
                 DeviceEvent::MouseMotion { delta: (x, y) } => {
@@ -77,8 +113,10 @@ fn main() {
             },
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(..) => {
-                    back_buffer = context.back_buffer().unwrap();
-                    let [width, height] = context.size();
+                    let [width, height] = surface.size();
+                    back_buffer = context
+                        .back_buffer([width, height])
+                        .unwrap();
                     camera.update_dimensions(width, height);
                 }
                 WindowEvent::CloseRequested
@@ -117,6 +155,8 @@ fn main() {
                 let now = std::time::Instant::now();
                 let t = (now - start).as_secs_f32();
 
+                let mut skybox = skybox.value(&mut context);
+
                 let mut pipeline_gate = context.new_pipeline_gate();
 
                 let mut ocean_frame = None;
@@ -129,8 +169,7 @@ fn main() {
                 pipeline_gate
                     .pipeline(
                         &back_buffer,
-                        &PipelineState::new()
-                            .set_clear_color([0.1, 0.2, 0.3, 1.0]),
+                        &PipelineState::new(),
                         |pipeline, mut shader_gate| {
                             let view = camera.view();
                             let projection = camera.projection();
@@ -143,7 +182,7 @@ fn main() {
                                     &mut shader_gate,
                                     view_projection,
                                     camera.position(),
-                                    skybox.texture(),
+                                    skybox.as_mut().map(|s| s.texture()),
                                     exposure,
                                 );
                             }
@@ -174,18 +213,20 @@ fn main() {
                                 );
                             }
 
-                            skybox.render(
-                                &pipeline,
-                                &mut shader_gate,
-                                view,
-                                projection,
-                                exposure,
-                            );
+                            if let Some(skybox) = skybox {
+                                skybox.render(
+                                    &pipeline,
+                                    &mut shader_gate,
+                                    view,
+                                    projection,
+                                    exposure,
+                                );
+                            }
                         },
                     )
                     .unwrap();
 
-                context.swap_buffers();
+                surface.swap_buffers();
 
                 glerror::print_gl_errors();
             }

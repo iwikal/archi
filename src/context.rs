@@ -4,13 +4,12 @@ use luminance::{
 };
 use luminance_gl::GL33;
 
-pub struct Context {
+pub struct Surface {
     pub ctx: glutin::WindowedContext<glutin::PossiblyCurrent>,
-    gl: GL33,
 }
 
-impl Context {
-    pub fn new(event_loop: &glutin::event_loop::EventLoop<()>) -> Self {
+impl Surface {
+    pub fn new(event_loop: &glutin::event_loop::EventLoop<()>) -> (Context, Self) {
         let primary_monitor = event_loop.primary_monitor();
 
         let window_builder = glutin::window::WindowBuilder::new()
@@ -35,7 +34,7 @@ impl Context {
 
         let gl = GL33::new().unwrap();
 
-        Self { ctx, gl }
+        (Context { gl }, Self { ctx })
     }
 
     /// Get the underlying size (in physical pixels) of the surface.
@@ -47,17 +46,25 @@ impl Context {
         [size.width, size.height]
     }
 
-    /// Get access to the back buffer.
-    pub fn back_buffer(
-        &mut self,
-    ) -> Result<Framebuffer<GL33, Dim2, (), ()>, FramebufferError> {
-        Framebuffer::back_buffer(self, self.size())
-    }
-
     /// Swap the back and front buffers.
     pub fn swap_buffers(&mut self) {
         let _ = self.ctx.swap_buffers();
     }
+}
+
+pub struct Context {
+    gl: GL33,
+}
+
+impl Context {
+    /// Get access to the back buffer.
+    pub fn back_buffer(
+        &mut self,
+        size: [u32; 2],
+    ) -> Result<Framebuffer<GL33, Dim2, (), ()>, FramebufferError> {
+        Framebuffer::back_buffer(self, size)
+    }
+
 }
 
 unsafe impl luminance::context::GraphicsContext for Context {

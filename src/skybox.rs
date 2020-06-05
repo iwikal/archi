@@ -43,8 +43,46 @@ struct CubeVertex {
     uv: VertexUv,
 }
 
+#[derive(Default)]
+pub struct ImageData {
+    pub width: usize,
+    pub height: usize,
+    pub data: Vec<(f32, f32, f32)>,
+}
+
 impl Skybox {
-    pub fn new(context: &mut Context) -> Self {
+    pub fn load_image() -> Result<ImageData, String> {
+        let bytes: &[u8] =
+            include_bytes!("../assets/colorful_studio_8k.hdr");
+
+        let image = hdrldr::load(bytes).map_err(|e| {
+            let err_str = match e {
+                hdrldr::LoadError::Io(e) => format!("{}", e),
+                hdrldr::LoadError::FileFormat => {
+                    String::from("invalid file")
+                }
+                hdrldr::LoadError::Rle => {
+                    String::from("invalid run-length encoding")
+                }
+            };
+            format!("could not load skybox: {}", err_str)
+        })?;
+
+        let hdrldr::Image { data, width, height } = image;
+
+        let data: Vec<_> = data
+            .into_iter()
+            .map(|hdrldr::RGB { r, g, b }| (r, g, b))
+            .collect();
+
+        Ok(ImageData {
+            width,
+            height,
+            data,
+        })
+    }
+
+    pub fn new(context: &mut Context, image: ImageData) -> Self {
         let tess = {
             let (vertices, indices) = {
                 let n_vertices = 24;
@@ -95,58 +133,27 @@ impl Skybox {
                 .unwrap()
         };
 
-        let mut load_hdri = || -> Result<_, String> {
-            let bytes: &[u8] =
-                include_bytes!("../assets/colorful_studio_8k.hdr");
-
-            let image = hdrldr::load(bytes).map_err(|e| {
-                let err_str = match e {
-                    hdrldr::LoadError::Io(e) => format!("{}", e),
-                    hdrldr::LoadError::FileFormat => {
-                        String::from("invalid file")
-                    }
-                    hdrldr::LoadError::Rle => {
-                        String::from("invalid run-length encoding")
-                    }
-                };
-                format!("could not load skybox: {}", err_str)
-            })?;
-
-            let mut texture = Texture::new(
-                context,
-                [image.width as u32, image.height as u32],
-                0,
-                Default::default(),
-            )
-            .unwrap();
-
-            let data: Vec<_> = image
-                .data
-                .into_iter()
-                .map(|hdrldr::RGB { r, g, b }| (r, g, b))
-                .collect();
-
-            texture
-                .upload(luminance::texture::GenMipmaps::Yes, &data)
-                .map_err(|e| e.to_string())?;
-
-            Ok(texture)
-        };
-
-        let hdri = match load_hdri() {
-            Ok(texture) => texture,
-            Err(e) => {
-                eprintln!("error loading skybox: {}", e);
-                Texture::new(context, [1, 1], 0, Default::default()).unwrap()
-            }
-        };
-
         let shader = crate::shader::from_strings(
             context,
             None,
             include_str!("./shaders/skybox.vert"),
             include_str!("./shaders/skybox.frag"),
         );
+
+        let hdri = {
+            let mut texture = Texture::new(
+                context,
+                [image.width as u32, image.height as u32],
+                0,
+                Default::default(),
+            ).map_err(|e| e.to_string()).unwrap();
+
+            texture
+                .upload(luminance::texture::GenMipmaps::Yes, &image.data)
+                .map_err(|e| e.to_string()).unwrap();
+
+            texture
+        };
 
         Self { hdri, shader, tess }
     }

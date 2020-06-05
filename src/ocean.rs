@@ -324,7 +324,7 @@ impl<'a> OceanFrame<'a> {
         shader_gate: &mut ShadingGate<Context>,
         view_projection: glm::Mat4,
         camera_pos: glm::Vec3,
-        sky_texture: &mut Texture<GL33, Dim2, RGB32F>,
+        sky_texture: Option<&mut Texture<GL33, Dim2, RGB32F>>,
         exposure: f32,
     ) {
         let Self {
@@ -334,14 +334,16 @@ impl<'a> OceanFrame<'a> {
         } = self;
 
         let heightmap = pipeline.bind_texture(heightmap).unwrap();
-        let sky_texture = pipeline.bind_texture(sky_texture).unwrap();
 
         shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
             iface.set(&uni.view_projection, view_projection.into());
             iface.set(&uni.heightmap, heightmap.binding());
 
             iface.set(&uni.camera_pos, camera_pos.into());
-            iface.set(&uni.sky_texture, sky_texture.binding());
+            if let Some(texture) = sky_texture {
+                let texture = pipeline.bind_texture(texture).unwrap();
+                iface.set(&uni.sky_texture, texture.binding());
+            }
             iface.set(&uni.exposure, exposure);
 
             render_gate.render(&Default::default(), |mut tess_gate| {
