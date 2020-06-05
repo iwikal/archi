@@ -163,22 +163,25 @@ impl Fft {
         } = self;
 
         let bits = (*width as f32).log2() as usize;
-        let mut first_round = true;
 
         let mut pingpong_buffers = {
             let [ping, pong] = pingpong_buffers;
             [ping, pong]
         };
 
+        let mut initial_texture = Some(freq_texture);
+
         for &direction in &[0, 1] {
             for stage in 0..bits {
                 let [in_buffer, out_buffer] = pingpong_buffers;
 
-                let mut texture = in_buffer.color_slot();
-                if first_round {
-                    first_round = false;
-                    texture = freq_texture;
-                }
+                let texture = match initial_texture {
+                    Some(t) => {
+                        initial_texture = None;
+                        t
+                    }
+                    None => in_buffer.color_slot(),
+                };
 
                 pipeline_gate
                     .pipeline(

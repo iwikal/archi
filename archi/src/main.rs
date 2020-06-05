@@ -160,10 +160,10 @@ fn main() {
 
                 let mut pipeline_gate = context.new_pipeline_gate();
 
-                let mut ocean_frame = None;
-                if render_stuff {
-                    ocean_frame = Some(ocean.simulate(&mut pipeline_gate, t));
-                }
+                let ocean_frame = match render_stuff {
+                    true => Some(ocean.simulate(&mut pipeline_gate, t)),
+                    false => None,
+                };
 
                 use luminance::pipeline::PipelineState;
 
