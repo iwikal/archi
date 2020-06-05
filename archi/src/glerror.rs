@@ -57,7 +57,7 @@ impl std::convert::TryFrom<GLenum> for GlDebugSeverity {
             gl::DEBUG_SEVERITY_MEDIUM => Ok(Self::Medium),
             gl::DEBUG_SEVERITY_LOW => Ok(Self::Low),
             gl::DEBUG_SEVERITY_NOTIFICATION => Ok(Self::Notification),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }

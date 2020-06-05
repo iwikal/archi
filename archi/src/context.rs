@@ -9,7 +9,9 @@ pub struct Surface {
 }
 
 impl Surface {
-    pub fn new(event_loop: &glutin::event_loop::EventLoop<()>) -> (Context, Self) {
+    pub fn new(
+        event_loop: &glutin::event_loop::EventLoop<()>,
+    ) -> (Context, Self) {
         let primary_monitor = event_loop.primary_monitor();
 
         let window_builder = glutin::window::WindowBuilder::new()
@@ -64,7 +66,6 @@ impl Context {
     ) -> Result<Framebuffer<GL33, Dim2, (), ()>, FramebufferError> {
         Framebuffer::back_buffer(self, size)
     }
-
 }
 
 unsafe impl luminance::context::GraphicsContext for Context {

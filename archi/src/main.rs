@@ -49,7 +49,10 @@ fn main() {
         }
 
         impl<T, F: FnMut(&mut context::Context) -> Option<T>> Lazy<T, F> {
-            fn value(&mut self, context: &mut context::Context) -> Option<&mut T> {
+            fn value(
+                &mut self,
+                context: &mut context::Context,
+            ) -> Option<&mut T> {
                 match self {
                     Self::Done(t) => Some(t),
                     Self::Pending(f) => match f(context) {
@@ -58,7 +61,7 @@ fn main() {
                             self.value(context)
                         }
                         None => None,
-                    }
+                    },
                 }
             }
         }
@@ -114,9 +117,7 @@ fn main() {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::Resized(..) => {
                     let [width, height] = surface.size();
-                    back_buffer = context
-                        .back_buffer([width, height])
-                        .unwrap();
+                    back_buffer = context.back_buffer([width, height]).unwrap();
                     camera.update_dimensions(width, height);
                 }
                 WindowEvent::CloseRequested

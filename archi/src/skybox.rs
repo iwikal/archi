@@ -52,15 +52,12 @@ pub struct ImageData {
 
 impl Skybox {
     pub fn load_image() -> Result<ImageData, String> {
-        let bytes: &[u8] =
-            include_bytes!("../assets/colorful_studio_8k.hdr");
+        let bytes: &[u8] = include_bytes!("../assets/colorful_studio_8k.hdr");
 
         let image = hdrldr::load(bytes).map_err(|e| {
             let err_str = match e {
                 hdrldr::LoadError::Io(e) => format!("{}", e),
-                hdrldr::LoadError::FileFormat => {
-                    String::from("invalid file")
-                }
+                hdrldr::LoadError::FileFormat => String::from("invalid file"),
                 hdrldr::LoadError::Rle => {
                     String::from("invalid run-length encoding")
                 }
@@ -68,7 +65,11 @@ impl Skybox {
             format!("could not load skybox: {}", err_str)
         })?;
 
-        let hdrldr::Image { data, width, height } = image;
+        let hdrldr::Image {
+            data,
+            width,
+            height,
+        } = image;
 
         let data: Vec<_> = data
             .into_iter()
@@ -146,11 +147,14 @@ impl Skybox {
                 [image.width as u32, image.height as u32],
                 0,
                 Default::default(),
-            ).map_err(|e| e.to_string()).unwrap();
+            )
+            .map_err(|e| e.to_string())
+            .unwrap();
 
             texture
                 .upload(luminance::texture::GenMipmaps::Yes, &image.data)
-                .map_err(|e| e.to_string()).unwrap();
+                .map_err(|e| e.to_string())
+                .unwrap();
 
             texture
         };

@@ -1,21 +1,8 @@
-[package]
-name = "archi"
-version = "0.1.0"
-authors = ["Joel Nordström <e.joel.nordstrom@gmail.com>"]
-edition = "2018"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-gl = "*"
-image = "0.22"
-luminance = "0.40"
-luminance-derive = "0.6"
-luminance-gl = "0.14"
-nalgebra-glm = "*"
-rand = "*"
-hdrldr = "*"
-glutin = { version = "0.24", default-features = false }
+members = [
+  "archi"
+]
 
 [profile.dev.package."*"]
 opt-level = 3
