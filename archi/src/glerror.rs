@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 fn error_string(error: gl::types::GLuint) -> &'static str {
     match error {
         gl::NO_ERROR => "GL_NO_ERROR",
@@ -38,7 +40,6 @@ pub fn assert_no_gl_error() {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
 #[repr(u32)]
 pub enum GlDebugSeverity {
     High = gl::DEBUG_SEVERITY_HIGH,
@@ -87,7 +88,6 @@ struct UserParam {
 }
 
 use gl::types::*;
-#[allow(unused)]
 extern "system" fn message_callback(
     source: GLenum,
     gltype: GLenum,
