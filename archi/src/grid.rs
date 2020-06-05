@@ -11,8 +11,9 @@ pub fn strip_grid(
 
     let restart = u32::max_value();
     let indices = {
-        let mut indices =
-            Vec::with_capacity(side_length * (line_count * 2 + 1) - 1);
+        let capacity = side_length * (line_count * 2 + 1) - 1;
+        let mut indices = Vec::with_capacity(capacity);
+
         let side_length = side_length as u32;
         let line_count = line_count as u32;
         for x in 0..side_length {
@@ -24,7 +25,8 @@ pub fn strip_grid(
                 indices.push(x * line_count + y + line_count);
             }
         }
-        assert_eq!(indices.len(), indices.capacity());
+
+        assert_eq!(indices.len(), capacity);
         indices
     };
 
@@ -43,10 +45,12 @@ pub fn square_patch_grid(
     side_length: u32,
 ) -> Tess<GL33, (), u32> {
     let indices = {
-        let mut indices = Vec::with_capacity({
+        let capacity = {
             let side_length = side_length as usize;
             side_length * side_length * 4
-        });
+        };
+
+        let mut indices = Vec::with_capacity(capacity);
 
         for x in 0..side_length {
             for y in 0..side_length {
@@ -57,7 +61,8 @@ pub fn square_patch_grid(
                 indices.push(x * line_count + y + line_count);
             }
         }
-        assert_eq!(indices.len(), indices.capacity());
+
+        assert_eq!(indices.len(), capacity);
         indices
     };
 
