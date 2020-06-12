@@ -31,46 +31,7 @@ fn main() {
     let [width, height] = surface.size();
     let mut camera = camera::Camera::new(width, height);
 
-    let mut skybox = {
-        let (tx, rx) = std::sync::mpsc::sync_channel(1);
-
-        std::thread::spawn(move || {
-            let image = skybox::Skybox::load_image().unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                Default::default()
-            });
-            tx.send(image).unwrap();
-        });
-
-        enum Lazy<T, F: FnMut(&mut context::Context) -> Option<T>> {
-            Pending(F),
-            Done(T),
-        }
-
-        impl<T, F: FnMut(&mut context::Context) -> Option<T>> Lazy<T, F> {
-            fn value(
-                &mut self,
-                context: &mut context::Context,
-            ) -> Option<&mut T> {
-                match self {
-                    Self::Done(t) => Some(t),
-                    Self::Pending(f) => match f(context) {
-                        Some(t) => {
-                            *self = Self::Done(t);
-                            self.value(context)
-                        }
-                        None => None,
-                    },
-                }
-            }
-        }
-
-        Lazy::Pending(move |context| {
-            rx.try_recv()
-                .ok()
-                .map(|image| skybox::Skybox::new(context, image))
-        })
-    };
+    let mut skybox = skybox::Skybox::new(&mut context);
 
     let mut ocean = ocean::Ocean::new(&mut context);
 
@@ -153,8 +114,6 @@ fn main() {
                 let now = std::time::Instant::now();
                 let t = (now - start).as_secs_f32();
 
-                let mut skybox = skybox.value(&mut context);
-
                 let mut pipeline_gate = context.new_pipeline_gate();
 
                 let ocean_frame = match render_stuff {
@@ -180,20 +139,17 @@ fn main() {
                                     &mut shader_gate,
                                     view_projection,
                                     camera.position(),
-                                    skybox.as_mut().map(|s| s.texture()),
+                                    None,
                                     exposure,
                                 );
                             }
 
-                            if let Some(skybox) = skybox {
-                                skybox.render(
-                                    &pipeline,
-                                    &mut shader_gate,
-                                    view,
-                                    projection,
-                                    exposure,
-                                );
-                            }
+                            skybox.render(
+                                &mut shader_gate,
+                                view,
+                                projection,
+                                exposure,
+                            );
                         },
                     )
                     .unwrap();

@@ -245,6 +245,7 @@ pub struct OceanShaderInterface {
     view_projection: Uniform<[[f32; 4]; 4]>,
     offset: Uniform<[f32; 2]>,
 
+    #[uniform(unbound)]
     sky_texture: Uniform<TextureBinding<Dim2, Floating>>,
     camera_pos: Uniform<[f32; 3]>,
     exposure: Uniform<f32>,
