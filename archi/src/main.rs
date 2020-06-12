@@ -13,7 +13,6 @@ mod camera;
 mod context;
 mod debug;
 mod fft;
-mod glerror;
 mod grid;
 mod input;
 mod ocean;
@@ -25,7 +24,7 @@ fn main() {
     let event_loop = glutin::event_loop::EventLoop::new();
     let (mut context, mut surface) = context::Surface::new(&event_loop);
 
-    glerror::debug_messages(glerror::GlDebugSeverity::Low);
+    debug::glerr::debug_messages(debug::glerr::GlDebugSeverity::Low);
 
     let mut back_buffer = context.back_buffer(surface.size()).unwrap();
 
@@ -83,8 +82,6 @@ fn main() {
     let mut last_input_read = start;
 
     let mut input_state = input::InputState::default();
-
-    let mut debugger = debug::Debugger::new(&mut context);
 
     surface.ctx.window().set_visible(true);
 
@@ -188,32 +185,6 @@ fn main() {
                                 );
                             }
 
-                            for &pos in &[
-                                glm::vec3(0.0, 0.0, 0.0),
-                                glm::vec3(1.0, 0.0, 0.0),
-                                glm::vec3(-1.0, 0.0, 0.0),
-                                glm::vec3(0.0, 1.0, 0.0),
-                                glm::vec3(0.0, -1.0, 0.0),
-                                glm::vec3(0.0, 0.0, 1.0),
-                                glm::vec3(0.0, 0.0, -1.0),
-                            ] {
-                                let model: glm::Mat4 = glm::identity();
-                                let model = glm::translate(&model, &pos);
-                                let model = glm::scale(
-                                    &model,
-                                    &glm::vec3(0.2, 0.2, 0.2),
-                                );
-                                let model = model * camera.orientation();
-
-                                debugger.render(
-                                    &pipeline,
-                                    &mut shader_gate,
-                                    view_projection,
-                                    model,
-                                    None,
-                                );
-                            }
-
                             if let Some(skybox) = skybox {
                                 skybox.render(
                                     &pipeline,
@@ -229,7 +200,7 @@ fn main() {
 
                 surface.swap_buffers();
 
-                glerror::print_gl_errors();
+                debug::glerr::print_gl_errors();
             }
             _ => {}
         }

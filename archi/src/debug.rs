@@ -12,6 +12,8 @@ use luminance::{
 use luminance_derive::UniformInterface;
 use luminance_gl::GL33;
 
+pub mod glerr;
+
 type M44 = [[f32; 4]; 4];
 
 #[derive(UniformInterface)]
