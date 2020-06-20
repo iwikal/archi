@@ -1,3 +1,5 @@
+#pragma include "complex.glsl"
+
 in vec2 uv;
 
 uniform sampler2D twiddle_indices;
@@ -7,14 +9,6 @@ out vec4 frag;
 
 uniform int stage;
 uniform int direction;
-
-// Complex multiplication
-vec2 cmul(vec2 c0, vec2 c1) {
-  vec2 c;
-  c.x = c0.x * c1.x - c0.y * c1.y;
-  c.y = c0.x * c1.y + c0.y * c1.x;
-  return c;
-}
 
 vec4 get_pixel(sampler2D sampler, ivec2 uv) {
   vec2 size = textureSize(sampler, 0);

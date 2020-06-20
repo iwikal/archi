@@ -20,29 +20,43 @@ impl Surface {
             )))
             .with_visible(false);
 
-        let windowed_ctx = glutin::ContextBuilder::new()
+        let window_context = glutin::ContextBuilder::new()
             .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 3)))
             .with_gl_profile(glutin::GlProfile::Core)
             .build_windowed(window_builder, event_loop)
             .unwrap();
 
-        let ctx =
-            unsafe { windowed_ctx.make_current().map_err(|(_, e)| e).unwrap() };
+        let window_context = unsafe {
+            window_context.make_current().map_err(|(_, e)| e).unwrap()
+        };
 
-        // init OpenGL
-        gl::load_with(|s| ctx.get_proc_address(s) as *const std::ffi::c_void);
+        gl::load_with(|s| {
+            window_context.get_proc_address(s) as *const std::ffi::c_void
+        });
 
-        ctx.window().set_cursor_visible(false);
+        window_context.window().set_cursor_visible(false);
 
-        let gl = GL33::new().unwrap();
+        let gl_context = GL33::new().unwrap();
+        let shader_preprocessor = crate::shader::Preprocessor::new();
 
-        (Context { gl }, Self { ctx })
+        let context = Context {
+            shader_preprocessor,
+            gl_context,
+        };
+
+        (
+            context,
+            Self {
+                ctx: window_context,
+            },
+        )
     }
 
     /// Get the underlying size (in physical pixels) of the surface.
     ///
-    /// This is equivalent to getting the inner size of the windowed context and converting it to
-    /// a physical size by using the HiDPI factor of the windowed context.
+    /// This is equivalent to getting the inner size of the windowed context
+    /// and converting it to a physical size by using the HiDPI factor of the
+    /// windowed context.
     pub fn size(&self) -> [u32; 2] {
         let size = self.ctx.window().inner_size();
         [size.width, size.height]
@@ -55,7 +69,8 @@ impl Surface {
 }
 
 pub struct Context {
-    gl: GL33,
+    pub shader_preprocessor: crate::shader::Preprocessor,
+    gl_context: GL33,
 }
 
 impl Context {
@@ -72,6 +87,6 @@ unsafe impl luminance::context::GraphicsContext for Context {
     type Backend = GL33;
 
     fn backend(&mut self) -> &mut Self::Backend {
-        &mut self.gl
+        &mut self.gl_context
     }
 }

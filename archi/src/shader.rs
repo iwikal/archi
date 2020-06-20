@@ -6,6 +6,33 @@ use luminance_gl::GL33;
 
 type Stage = luminance::shader::Stage<GL33>;
 
+pub struct Preprocessor {
+    inner: glsl_include::Context<'static>,
+}
+
+impl Preprocessor {
+    pub fn new() -> Self {
+        let mut inner = glsl_include::Context::new();
+
+        macro_rules! add_source {
+            ($path:expr) => {
+                let i = match $path.rfind("/") {
+                    Some(i) => i + 1,
+                    None => 0,
+                };
+                let name = &$path[i..];
+                inner.include(name, include_str!($path));
+            };
+        }
+
+        add_source!("./shaders/include/complex.glsl");
+        add_source!("./shaders/include/tonemap.glsl");
+        add_source!("./shaders/include/atmosphere.glsl");
+
+        Self { inner }
+    }
+}
+
 pub struct ShaderSource {
     pub name: &'static str,
     pub body: &'static str,
@@ -20,37 +47,14 @@ fn tess_stages<'a, S: ?Sized>(
     }
 }
 
-pub fn from_strings<Sem, Out, Uni>(
-    context: &mut Context,
-    tess: Option<(&str, &str)>,
-    vert: &str,
-    frag: &str,
-) -> Program<GL33, Sem, Out, Uni>
-where
-    Sem: luminance::vertex::Semantics,
-    Uni: luminance::shader::UniformInterface<GL33>,
-{
-    let BuiltProgram { program, warnings } = context
-        .new_shader_program()
-        .from_strings(vert, tess.map(tess_stages), None, frag)
-        .unwrap_or_else(|error| {
-            eprintln!("{}", error);
-            panic!("{:?}", (tess, vert, frag));
-        });
-
-    for warning in warnings {
-        eprintln!("{}", warning);
-    }
-
-    program
-}
-
 fn compile_stage(
     context: &mut Context,
     ty: StageType,
     src: &ShaderSource,
 ) -> Result<Stage, ()> {
-    Stage::new(context, ty, src.body).map_err(|err| {
+    let body = context.shader_preprocessor.inner.expand(src.body).unwrap();
+
+    Stage::new(context, ty, body).map_err(|err| {
         eprintln!(r#""{}": {}"#, src.name, err);
     })
 }

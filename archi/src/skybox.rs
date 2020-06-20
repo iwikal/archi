@@ -97,11 +97,12 @@ impl Skybox {
                 .unwrap()
         };
 
-        let shader = crate::shader::from_strings(
+        let shader = crate::shader::from_sources(
             context,
             None,
-            include_str!("./shaders/skybox.vert"),
-            include_str!("./shaders/skybox.frag"),
+            crate::shader_source!("./shaders/skybox.vert"),
+            None,
+            crate::shader_source!("./shaders/skybox.frag"),
         );
 
         Self { shader, tess }

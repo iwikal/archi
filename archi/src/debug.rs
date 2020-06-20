@@ -31,11 +31,12 @@ pub struct Debugger {
 
 impl Debugger {
     pub fn new(context: &mut Context) -> Self {
-        let shader = crate::shader::from_strings(
+        let shader = crate::shader::from_sources(
             context,
             None,
-            include_str!("./shaders/framebuffer-debug.vert"),
-            include_str!("./shaders/framebuffer-debug.frag"),
+            crate::shader_source!("./shaders/framebuffer-debug.vert"),
+            None,
+            crate::shader_source!("./shaders/framebuffer-debug.frag"),
         );
 
         let tess = context
