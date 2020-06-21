@@ -46,7 +46,7 @@ pub struct ImageData {
 }
 
 impl Skybox {
-    pub fn new(context: &mut Context) -> Self {
+    pub fn new(context: &mut Context) -> anyhow::Result<Self> {
         let tess = {
             let (vertices, indices) = {
                 let n_vertices = 24;
@@ -103,9 +103,9 @@ impl Skybox {
             crate::shader_source!("./shaders/skybox.vert"),
             None,
             crate::shader_source!("./shaders/skybox.frag"),
-        );
+        )?;
 
-        Self { shader, tess }
+        Ok(Self { shader, tess })
     }
 
     pub fn render(

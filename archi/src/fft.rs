@@ -83,7 +83,7 @@ struct InversionInterface {
 pub type FftTexture = Texture<GL33, Dim2, RGBA32F>;
 pub type FftFramebuffer = Framebuffer<GL33, Dim2, RGBA32F, ()>;
 
-pub fn fft_framebuffer(context: &mut Context, n: u32) -> FftFramebuffer {
+pub fn fft_framebuffer(context: &mut Context, n: u32) -> anyhow::Result<FftFramebuffer> {
     use luminance::texture::{MagFilter, MinFilter, Sampler, Wrap};
     let sampler = Sampler {
         wrap_s: Wrap::Repeat,
@@ -92,8 +92,7 @@ pub fn fft_framebuffer(context: &mut Context, n: u32) -> FftFramebuffer {
         min_filter: MinFilter::LinearMipmapLinear,
         ..Default::default()
     };
-    FftFramebuffer::new(context, [n, n], 0, sampler)
-        .expect("fft framebuffer creation")
+    Ok(FftFramebuffer::new(context, [n, n], 0, sampler)?)
 }
 
 pub struct Fft {
@@ -106,7 +105,7 @@ pub struct Fft {
 }
 
 impl Fft {
-    pub fn new(context: &mut Context, width: u32) -> Self {
+    pub fn new(context: &mut Context, width: u32) -> anyhow::Result<Self> {
         let twiddle_indices = twiddle_indices(context, width);
 
         let butterfly_shader = crate::shader::from_sources(
@@ -115,7 +114,7 @@ impl Fft {
             QUAD_VS_SRC,
             None,
             crate::shader_source!("./shaders/butterfly.frag"),
-        );
+        )?;
 
         let inversion_shader = crate::shader::from_sources(
             context,
@@ -123,28 +122,27 @@ impl Fft {
             QUAD_VS_SRC,
             None,
             crate::shader_source!("./shaders/inversion.frag"),
-        );
+        )?;
 
         let pingpong_buffers = [
-            fft_framebuffer(context, width),
-            fft_framebuffer(context, width),
+            fft_framebuffer(context, width)?,
+            fft_framebuffer(context, width)?,
         ];
 
         let tess = context
             .new_tess()
             .set_mode(Mode::TriangleStrip)
             .set_vertex_nb(4)
-            .build()
-            .unwrap();
+            .build()?;
 
-        Self {
+        Ok(Self {
             width,
             tess,
             twiddle_indices,
             butterfly_shader,
             inversion_shader,
             pingpong_buffers,
-        }
+        })
     }
 
     pub fn render<'a>(

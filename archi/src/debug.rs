@@ -30,23 +30,22 @@ pub struct Debugger {
 }
 
 impl Debugger {
-    pub fn new(context: &mut Context) -> Self {
+    pub fn new(context: &mut Context) -> anyhow::Result<Self> {
         let shader = crate::shader::from_sources(
             context,
             None,
             crate::shader_source!("./shaders/framebuffer-debug.vert"),
             None,
             crate::shader_source!("./shaders/framebuffer-debug.frag"),
-        );
+        )?;
 
         let tess = context
             .new_tess()
             .set_mode(Mode::TriangleStrip)
             .set_vertex_nb(4)
-            .build()
-            .unwrap();
+            .build()?;
 
-        Self { shader, tess }
+        Ok(Self { shader, tess })
     }
 
     pub fn render(

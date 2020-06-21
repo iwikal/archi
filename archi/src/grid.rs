@@ -6,7 +6,7 @@ use luminance_gl::GL33;
 pub fn square_patch_grid(
     context: &mut Context,
     side_length: u32,
-) -> Tess<GL33, (), u32> {
+) -> anyhow::Result<Tess<GL33, (), u32>> {
     let indices = {
         let capacity = {
             let side_length = side_length as usize;
@@ -29,11 +29,12 @@ pub fn square_patch_grid(
         indices
     };
 
-    context
+    let tess = context
         .new_tess()
         .set_mode(Mode::Patch(4))
         .set_vertex_nb(indices.len())
         .set_indices(indices)
-        .build()
-        .unwrap()
+        .build()?;
+
+    Ok(tess)
 }

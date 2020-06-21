@@ -15,13 +15,14 @@ use luminance_gl::GL33;
 const QUAD_VS_SRC: crate::shader::ShaderSource =
     crate::shader_source!("./shaders/quad.vert");
 
-fn quad_tess(context: &mut Context) -> Tess<GL33, ()> {
-    context
+fn quad_tess(context: &mut Context) -> anyhow::Result<Tess<GL33, ()>> {
+    let tess = context
         .new_tess()
         .set_mode(Mode::TriangleStrip)
         .set_vertex_nb(4)
-        .build()
-        .unwrap()
+        .build()?;
+
+    Ok(tess)
 }
 
 #[derive(UniformInterface)]
@@ -52,11 +53,10 @@ struct H0k {
 const N: u32 = 0x200;
 
 impl H0k {
-    pub fn new(context: &mut Context) -> Self {
+    pub fn new(context: &mut Context) -> anyhow::Result<Self> {
         let size = [N, N];
         let framebuffer =
-            Framebuffer::new(context, size, 0, Default::default())
-                .expect("framebuffer creation");
+            Framebuffer::new(context, size, 0, Default::default())?;
 
         let shader = crate::shader::from_sources(
             context,
@@ -64,7 +64,7 @@ impl H0k {
             QUAD_VS_SRC,
             None,
             crate::shader_source!("./shaders/h0k.frag"),
-        );
+        )?;
 
         let input_texture = {
             use luminance::texture::{MagFilter, MinFilter, Sampler};
@@ -73,7 +73,7 @@ impl H0k {
             sampler.min_filter = MinFilter::Nearest;
 
             let mut input_texture =
-                Texture::new(context, size, 0, sampler).unwrap();
+                Texture::new(context, size, 0, sampler)?;
             let length = N * N;
             let mut pixels = Vec::with_capacity(length as usize);
             let mut rng = rand::thread_rng();
@@ -82,13 +82,13 @@ impl H0k {
                 pixels.push(rng.gen());
             }
 
-            input_texture.upload(GenMipmaps::No, &pixels).unwrap();
+            input_texture.upload(GenMipmaps::No, &pixels)?;
             input_texture
         };
 
-        let tess = quad_tess(context);
+        let tess = quad_tess(context)?;
 
-        Self {
+        Ok(Self {
             tess,
             input_texture,
             shader,
@@ -98,13 +98,13 @@ impl H0k {
             intensity: 40.0, // wind speed
             direction: glm::vec2(1.0, 1.0),
             l: 0.5, // capillary supress factor
-        }
+        })
     }
 
     fn render(
         &mut self,
         pipeline_gate: &mut PipelineGate<Context>,
-    ) -> &mut H0kTexture {
+    ) -> anyhow::Result<&mut H0kTexture> {
         let Self {
             framebuffer,
             input_texture,
@@ -117,6 +117,7 @@ impl H0k {
             l,
             ..
         } = self;
+
         pipeline_gate
             .pipeline(
                 &*framebuffer,
@@ -144,9 +145,9 @@ impl H0k {
                         },
                     );
                 },
-            )
-            .unwrap();
-        framebuffer.color_slot()
+            )?;
+
+        Ok(framebuffer.color_slot())
     }
 
     fn into_texture(self) -> H0kTexture {
@@ -170,31 +171,30 @@ struct Hkt {
 }
 
 impl Hkt {
-    fn new(context: &mut Context) -> Self {
+    fn new(context: &mut Context) -> anyhow::Result<Self> {
         let size = [N, N];
         let framebuffer =
-            Framebuffer::new(context, size, 0, Default::default())
-                .expect("framebuffer creation");
+            Framebuffer::new(context, size, 0, Default::default())?;
         let shader = crate::shader::from_sources(
             context,
             None,
             QUAD_VS_SRC,
             None,
             crate::shader_source!("./shaders/hkt.frag"),
-        );
+        )?;
 
         use luminance::texture::{MagFilter, MinFilter, Sampler};
         let mut sampler = Sampler::default();
         sampler.mag_filter = MagFilter::Nearest;
         sampler.min_filter = MinFilter::Nearest;
 
-        let tess = quad_tess(context);
+        let tess = quad_tess(context)?;
 
-        Self {
+        Ok(Self {
             tess,
             shader,
             framebuffer,
-        }
+        })
     }
 
     fn render(
@@ -235,6 +235,7 @@ impl Hkt {
                 },
             )
             .unwrap();
+
         framebuffer.color_slot()
     }
 }
@@ -263,12 +264,12 @@ pub struct Ocean {
 }
 
 impl Ocean {
-    pub fn new(context: &mut Context) -> Self {
-        let mut h0k = H0k::new(context);
-        h0k.render(&mut context.new_pipeline_gate());
+    pub fn new(context: &mut Context) -> anyhow::Result<Self> {
+        let mut h0k = H0k::new(context)?;
+        h0k.render(&mut context.new_pipeline_gate())?;
 
-        let hkt = Hkt::new(context);
-        let fft = Fft::new(context, N);
+        let hkt = Hkt::new(context)?;
+        let fft = Fft::new(context, N)?;
         let shader = crate::shader::from_sources(
             context,
             Some((
@@ -278,19 +279,19 @@ impl Ocean {
             crate::shader_source!("./shaders/ocean.vert"),
             None, // Some(crate::shader_source!("./shaders/ocean.geom")),
             crate::shader_source!("./shaders/ocean.frag"),
-        );
+        )?;
 
-        let tess = crate::grid::square_patch_grid(context, 0x100);
+        let tess = crate::grid::square_patch_grid(context, 0x100)?;
 
         let h0k_texture = h0k.into_texture();
 
-        Self {
+        Ok(Self {
             h0k_texture,
             hkt,
             fft,
             shader,
             tess,
-        }
+        })
     }
 
     pub fn simulate(

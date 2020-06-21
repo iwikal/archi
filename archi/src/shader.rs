@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use crate::context::Context;
 use luminance::context::GraphicsContext;
 use luminance::shader::{BuiltProgram, Program};
@@ -51,12 +52,12 @@ fn compile_stage(
     context: &mut Context,
     ty: StageType,
     src: &ShaderSource,
-) -> Result<Stage, ()> {
-    let body = context.shader_preprocessor.inner.expand(src.body).unwrap();
+) -> anyhow::Result<Stage> {
+    let body = context.shader_preprocessor.inner.expand(src.body)?;
 
-    Stage::new(context, ty, body).map_err(|err| {
-        eprintln!(r#""{}": {}"#, src.name, err);
-    })
+    let stage = Stage::new(context, ty, body)
+        .with_context(|| format!("failed to compile {} {}", ty, src.name))?;
+    Ok(stage)
 }
 
 type Stages = (Option<(Stage, Stage)>, Stage, Option<Stage>, Stage);
@@ -67,10 +68,10 @@ fn compile_stages(
     vert: &ShaderSource,
     geom: Option<&ShaderSource>,
     frag: &ShaderSource,
-) -> Result<Stages, ()> {
+) -> anyhow::Result<Stages> {
     let tess = tess
         .as_ref()
-        .map(|(control_source, eval_source)| {
+        .map(|(control_source, eval_source)| -> anyhow::Result<_> {
             let tcs = compile_stage(
                 context,
                 StageType::TessellationControlShader,
@@ -100,7 +101,7 @@ pub fn from_sources<Sem, Out, Uni>(
     vert: ShaderSource,
     geom: Option<ShaderSource>,
     frag: ShaderSource,
-) -> Program<GL33, Sem, Out, Uni>
+) -> anyhow::Result<Program<GL33, Sem, Out, Uni>>
 where
     Sem: luminance::vertex::Semantics,
     Uni: luminance::shader::UniformInterface<GL33>,
@@ -111,8 +112,7 @@ where
         &vert,
         geom.as_ref(),
         &frag,
-    )
-    .expect("aborting due to previous errors");
+    )?;
 
     let tess_stage: Option<TessellationStages<Stage>> =
         tess_stage.as_ref().map(|(c, e)| tess_stages((c, e)));
@@ -122,26 +122,25 @@ where
     let BuiltProgram { program, warnings } = context
         .new_shader_program()
         .from_stages(&vert_stage, tess_stage, geom_stage, &frag_stage)
-        .unwrap_or_else(|error| {
-            eprintln!("failed to build program with stages:");
+        .with_context(|| {
+            let mut buf = String::from("failed to link shader program:\n");
             if let Some((control, eval)) = tess {
-                eprintln!("  tessellation control:    {}", control.name);
-                eprintln!("  tessellation evaluation: {}", eval.name);
+                buf.push_str(&format!("  tessellation control:    {}", control.name));
+                buf.push_str(&format!("  tessellation evaluation: {}", eval.name));
             }
-            eprintln!("  vertex stage:            {}", vert.name);
+            buf.push_str(&format!("  vertex stage:            {}", vert.name));
             if let Some(geom) = geom {
-                eprintln!("  geometry stage:          {}", geom.name);
+                buf.push_str(&format!("  geometry stage:          {}", geom.name));
             }
-            eprintln!("  fragment stage:          {}", frag.name);
-            eprintln!("{}", error);
-            panic!();
-        });
+            buf.push_str(&format!("  fragment stage:          {}", frag.name));
+            buf
+        })?;
 
     for warning in warnings {
         eprintln!("{}", warning);
     }
 
-    program
+    Ok(program)
 }
 
 #[macro_export]

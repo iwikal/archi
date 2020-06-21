@@ -2,6 +2,7 @@
 #[windows_subsystem = "windows"]
 extern crate nalgebra_glm as glm;
 
+use anyhow::Context as _;
 use glutin::{
     event::{DeviceEvent, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -38,8 +39,8 @@ fn main() -> anyhow::Result<()> {
         back_buffer: context.back_buffer(surface.size())?,
         camera: camera::Camera::new(width, height),
         movement: input::Movement::default(),
-        skybox: skybox::Skybox::new(&mut context),
-        ocean: ocean::Ocean::new(&mut context),
+        skybox: skybox::Skybox::new(&mut context)?,
+        ocean: ocean::Ocean::new(&mut context)?,
         exposure: 0.2,
         render_stuff: true,
     };
@@ -76,7 +77,8 @@ fn main() -> anyhow::Result<()> {
                 let now = std::time::Instant::now();
                 let t = (now - start).as_secs_f32();
 
-                draw(t, &mut context, &mut state)?;
+                draw(t, &mut context, &mut state)
+                    .context("Failed to render")?;
 
                 surface.swap_buffers();
 
@@ -89,10 +91,11 @@ fn main() -> anyhow::Result<()> {
     };
 
     event_loop.run(move |event, _, control_flow| {
-        match on_event(event, control_flow) {
+        match on_event(event, control_flow).context("Failed to process event") {
             Ok(_) => {}
             Err(e) => {
-                eprintln!("{}", e);
+                eprintln!("Error: {:?}", e);
+
                 *control_flow = ControlFlow::Exit;
             }
         }
