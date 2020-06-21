@@ -1,7 +1,7 @@
 use glutin::event;
 
 #[derive(Default, Debug)]
-pub struct InputState {
+pub struct Movement {
     forward: bool,
     backward: bool,
     left: bool,
@@ -10,7 +10,7 @@ pub struct InputState {
     down: bool,
 }
 
-impl InputState {
+impl Movement {
     pub fn update(&mut self, event: &event::Event<()>) {
         if let event::Event::WindowEvent {
             event:

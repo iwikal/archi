@@ -73,12 +73,14 @@ pub struct Context {
     gl_context: GL33,
 }
 
+pub type BackBuffer = Framebuffer<GL33, Dim2, (), ()>;
+
 impl Context {
     /// Get access to the back buffer.
     pub fn back_buffer(
         &mut self,
         size: [u32; 2],
-    ) -> Result<Framebuffer<GL33, Dim2, (), ()>, FramebufferError> {
+    ) -> Result<BackBuffer, FramebufferError> {
         Framebuffer::back_buffer(self, size)
     }
 }
