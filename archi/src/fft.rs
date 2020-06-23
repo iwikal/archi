@@ -83,7 +83,10 @@ struct InversionInterface {
 pub type FftTexture = Texture<GL33, Dim2, RGBA32F>;
 pub type FftFramebuffer = Framebuffer<GL33, Dim2, RGBA32F, ()>;
 
-pub fn fft_framebuffer(context: &mut Context, n: u32) -> anyhow::Result<FftFramebuffer> {
+pub fn fft_framebuffer(
+    context: &mut Context,
+    n: u32,
+) -> anyhow::Result<FftFramebuffer> {
     use luminance::texture::{MagFilter, MinFilter, Sampler, Wrap};
     let sampler = Sampler {
         wrap_s: Wrap::Repeat,

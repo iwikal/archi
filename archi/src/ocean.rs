@@ -72,8 +72,7 @@ impl H0k {
             sampler.mag_filter = MagFilter::Nearest;
             sampler.min_filter = MinFilter::Nearest;
 
-            let mut input_texture =
-                Texture::new(context, size, 0, sampler)?;
+            let mut input_texture = Texture::new(context, size, 0, sampler)?;
             let length = N * N;
             let mut pixels = Vec::with_capacity(length as usize);
             let mut rng = rand::thread_rng();
@@ -118,34 +117,25 @@ impl H0k {
             ..
         } = self;
 
-        pipeline_gate
-            .pipeline(
-                &*framebuffer,
-                &Default::default(),
-                |pipeline, mut shader_gate| {
-                    let bound_noise =
-                        pipeline.bind_texture(input_texture).unwrap();
-                    shader_gate.shade(
-                        shader,
-                        |mut iface, uni, mut render_gate| {
-                            iface
-                                .set(&uni.input_texture, bound_noise.binding());
-                            iface.set(&uni.n, N as i32);
-                            iface.set(&uni.scale, *scale);
-                            iface.set(&uni.amplitude, *amplitude);
-                            iface.set(&uni.intensity, *intensity);
-                            iface.set(&uni.direction, (*direction).into());
-                            iface.set(&uni.l, *l);
-                            render_gate.render(
-                                &Default::default(),
-                                |mut tess_gate| {
-                                    tess_gate.render(&*tess);
-                                },
-                            );
-                        },
-                    );
-                },
-            )?;
+        pipeline_gate.pipeline(
+            &*framebuffer,
+            &Default::default(),
+            |pipeline, mut shader_gate| {
+                let bound_noise = pipeline.bind_texture(input_texture).unwrap();
+                shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
+                    iface.set(&uni.input_texture, bound_noise.binding());
+                    iface.set(&uni.n, N as i32);
+                    iface.set(&uni.scale, *scale);
+                    iface.set(&uni.amplitude, *amplitude);
+                    iface.set(&uni.intensity, *intensity);
+                    iface.set(&uni.direction, (*direction).into());
+                    iface.set(&uni.l, *l);
+                    render_gate.render(&Default::default(), |mut tess_gate| {
+                        tess_gate.render(&*tess);
+                    });
+                });
+            },
+        )?;
 
         Ok(framebuffer.color_slot())
     }

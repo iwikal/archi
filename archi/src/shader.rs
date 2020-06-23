@@ -1,9 +1,11 @@
-use anyhow::Context as _;
 use crate::context::Context;
+use anyhow::Context as _;
 use luminance::context::GraphicsContext;
 use luminance::shader::{BuiltProgram, Program};
 use luminance::shader::{StageType, TessellationStages};
 use luminance_gl::GL33;
+
+mod preprocessor;
 
 type Stage = luminance::shader::Stage<GL33>;
 
@@ -125,12 +127,21 @@ where
         .with_context(|| {
             let mut buf = String::from("failed to link shader program:\n");
             if let Some((control, eval)) = tess {
-                buf.push_str(&format!("  tessellation control:    {}", control.name));
-                buf.push_str(&format!("  tessellation evaluation: {}", eval.name));
+                buf.push_str(&format!(
+                    "  tessellation control:    {}",
+                    control.name
+                ));
+                buf.push_str(&format!(
+                    "  tessellation evaluation: {}",
+                    eval.name
+                ));
             }
             buf.push_str(&format!("  vertex stage:            {}", vert.name));
             if let Some(geom) = geom {
-                buf.push_str(&format!("  geometry stage:          {}", geom.name));
+                buf.push_str(&format!(
+                    "  geometry stage:          {}",
+                    geom.name
+                ));
             }
             buf.push_str(&format!("  fragment stage:          {}", frag.name));
             buf
