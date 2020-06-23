@@ -10,12 +10,12 @@ mod preprocessor;
 type Stage = luminance::shader::Stage<GL33>;
 
 pub struct Preprocessor {
-    inner: glsl_include::Context<'static>,
+    inner: preprocessor::Preprocessor,
 }
 
 impl Preprocessor {
     pub fn new() -> Self {
-        let mut inner = glsl_include::Context::new();
+        let mut inner = preprocessor::Preprocessor::new();
 
         macro_rules! add_source {
             ($path:expr) => {
@@ -24,7 +24,10 @@ impl Preprocessor {
                     None => 0,
                 };
                 let name = &$path[i..];
-                inner.include(name, include_str!($path));
+                inner.add_header(ShaderSource {
+                    name,
+                    body: include_str!($path),
+                });
             };
         }
 
@@ -36,6 +39,7 @@ impl Preprocessor {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct ShaderSource {
     pub name: &'static str,
     pub body: &'static str,
@@ -55,7 +59,7 @@ fn compile_stage(
     ty: StageType,
     src: &ShaderSource,
 ) -> anyhow::Result<Stage> {
-    let body = context.shader_preprocessor.inner.expand(src.body)?;
+    let body = context.shader_preprocessor.inner.expand(src)?;
 
     let stage = Stage::new(context, ty, body)
         .with_context(|| format!("failed to compile {} {}", ty, src.name))?;
