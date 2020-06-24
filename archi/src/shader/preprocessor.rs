@@ -19,7 +19,7 @@ impl std::fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error { }
+impl std::error::Error for Error {}
 
 #[derive(Default)]
 pub struct Preprocessor {
@@ -43,13 +43,11 @@ impl Preprocessor {
             (Some(word), None) => {
                 let mut chars = word.chars();
                 match (chars.next(), chars.next_back()) {
-                    (Some('"'), Some('"')) => (),
-                    _ => Err(Error::Format)?,
+                    (Some('"'), Some('"')) => Ok(chars.as_str()),
+                    _ => Err(Error::Format),
                 }
-
-                Ok(chars.as_str())
             }
-            _ => Err(Error::Format)?,
+            _ => Err(Error::Format),
         }
     }
 
@@ -67,9 +65,10 @@ impl Preprocessor {
         }
 
         let pragma = "#pragma include ";
-        let has_pragma = source.body.lines()
-            .find(|&l| l.starts_with(pragma))
-            .is_some();
+        let has_pragma = source
+            .body
+            .lines()
+            .any(|l| l.starts_with(pragma));
 
         let value: CowStr = if has_pragma {
             let mut buf = String::with_capacity(source.body.len());
@@ -83,15 +82,14 @@ impl Preprocessor {
                         continue;
                     }
 
-                    let body = *self
-                        .headers.get(name)
-                        .ok_or(Error::NotFound)?;
+                    let body =
+                        *self.headers.get(name).ok_or(Error::NotFound)?;
 
                     included_names.insert(name);
-                    let expanded_header = self.expand_recursive(&Source {
-                        name,
-                        body,
-                    }, included_names)?;
+                    let expanded_header = self.expand_recursive(
+                        &Source { name, body },
+                        included_names,
+                    )?;
 
                     buf.push_str(&expanded_header);
                     match expanded_header.chars().next_back() {
