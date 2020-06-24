@@ -234,7 +234,7 @@ impl Hkt {
 pub struct OceanShaderInterface {
     heightmap: Uniform<TextureBinding<Dim2, Floating>>,
     view_projection: Uniform<[[f32; 4]; 4]>,
-    offset: Uniform<[f32; 2]>,
+    camera_offset: Uniform<[f32; 2]>,
 
     #[uniform(unbound)]
     sky_texture: Uniform<TextureBinding<Dim2, Floating>>,
@@ -339,12 +339,8 @@ impl<'a> OceanFrame<'a> {
             iface.set(&uni.exposure, exposure);
 
             render_gate.render(&Default::default(), |mut tess_gate| {
-                for x in -1..1 {
-                    for y in -1..1 {
-                        iface.set(&uni.offset, [x as f32, y as f32]);
-                        tess_gate.render(&**tess);
-                    }
-                }
+                iface.set(&uni.camera_offset, [camera_pos.x, camera_pos.z]);
+                tess_gate.render(&**tess);
             });
         })
     }
