@@ -32,9 +32,10 @@ pub enum Semantics {
 
 #[derive(Clone, Copy, Vertex)]
 #[vertex(sem = "Semantics")]
-#[allow(unused)]
 struct CubeVertex {
+    #[allow(unused)]
     position: VertexPosition,
+    #[allow(unused)]
     uv: VertexUv,
 }
 

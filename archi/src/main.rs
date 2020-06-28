@@ -138,7 +138,7 @@ fn draw(
 
     pipeline_gate.pipeline(
         &back_buffer,
-        &PipelineState::new(),
+        &PipelineState::new().enable_srgb(true),
         |pipeline, mut shader_gate| {
             let view = camera.view();
             let projection = camera.projection();
