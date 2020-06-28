@@ -187,25 +187,26 @@ fn input(
             }
             _ => {}
         },
-        Event::WindowEvent { event, .. } => match event {
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state: glutin::event::ElementState::Released,
-                        virtual_keycode,
-                        scancode,
-                        ..
-                    },
-                ..
-            } => match (virtual_keycode, scancode) {
-                (_, 18) => {
-                    state.render_stuff = !state.render_stuff;
-                }
-                (Some(VirtualKeyCode::Escape), _) => {
-                    return Ok(ControlFlow::Exit);
-                }
-                _ => {}
-            },
+        Event::WindowEvent {
+            event:
+                WindowEvent::KeyboardInput {
+                    input:
+                        KeyboardInput {
+                            state: glutin::event::ElementState::Released,
+                            virtual_keycode,
+                            scancode,
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } => match (virtual_keycode, scancode) {
+            (_, 18) => {
+                state.render_stuff = !state.render_stuff;
+            }
+            (Some(VirtualKeyCode::Escape), _) => {
+                return Ok(ControlFlow::Exit);
+            }
             _ => {}
         },
         Event::MainEventsCleared => {
