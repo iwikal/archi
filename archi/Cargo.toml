@@ -10,7 +10,6 @@ edition = "2018"
 anyhow = "1.0.31"
 gl = "*"
 glutin = { version = "0.24", default-features = false }
-hdrldr = "*"
 image = "0.22"
 luminance = "0.40"
 luminance-derive = "0.6"
