@@ -1,4 +1,4 @@
-#define PI 3.141592
+#define TAU 6.283185307179586476925286766559
 #define iSteps 16
 #define jSteps 8
 
@@ -35,8 +35,8 @@ vec3 atmosphere(vec3 r, vec3 r0, vec3 pSun, float iSun, float rPlanet, float rAt
     float mu = dot(r, pSun);
     float mumu = mu * mu;
     float gg = g * g;
-    float pRlh = 3.0 / (16.0 * PI) * (1.0 + mumu);
-    float pMie = 3.0 / (8.0 * PI) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg));
+    float pRlh = 3.0 / (8.0 * TAU) * (1.0 + mumu);
+    float pMie = 3.0 / (4.0 * TAU) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg));
 
     // Sample the primary ray.
     for (int i = 0; i < iSteps; i++) {

@@ -10,6 +10,7 @@ use luminance::{
 };
 use luminance_derive::UniformInterface;
 use luminance_gl::GL33;
+use std::f32::consts::TAU;
 
 const QUAD_VS_SRC: crate::shader::ShaderSource =
     crate::shader_source!("./shaders/quad.vert");
@@ -28,8 +29,6 @@ pub fn twiddle_indices(context: &mut Context, size: u32) -> TwiddleTexture {
     let height = size;
     let mut texture =
         Texture::new(context, [width, height], 0, sampler).unwrap();
-
-    const TAU: f32 = std::f32::consts::PI * 2.0;
 
     let length = width * height;
     let mut pixels = Vec::with_capacity(length as usize);
