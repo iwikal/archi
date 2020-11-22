@@ -65,17 +65,13 @@ impl Preprocessor {
         }
 
         let pragma = "#pragma include ";
-        let has_pragma = source
-            .body
-            .lines()
-            .any(|l| l.starts_with(pragma));
+        let has_pragma = source.body.lines().any(|l| l.starts_with(pragma));
 
         let value: CowStr = if has_pragma {
             let mut buf = String::with_capacity(source.body.len());
 
             for line in source.body.lines() {
-                if line.starts_with(pragma) {
-                    let include = &line[pragma.len()..];
+                if let Some(include) = line.strip_prefix(pragma) {
                     let name = Self::parse_include_name(include)?;
 
                     if included_names.contains(name) {
