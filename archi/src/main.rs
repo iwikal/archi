@@ -1,4 +1,3 @@
-#![feature(track_caller)]
 #[windows_subsystem = "windows"]
 extern crate nalgebra_glm as glm;
 
