@@ -1,8 +1,8 @@
-use luminance::{
+use luminance_front::{
     framebuffer::{Framebuffer, FramebufferError},
     texture::Dim2,
+    Backend,
 };
-use luminance_gl::GL33;
 
 pub struct Surface {
     pub ctx: glutin::WindowedContext<glutin::PossiblyCurrent>,
@@ -36,7 +36,7 @@ impl Surface {
 
         window_context.window().set_cursor_visible(false);
 
-        let gl_context = GL33::new().unwrap();
+        let gl_context = Backend::new().unwrap();
         let shader_preprocessor = crate::shader::Preprocessor::new();
 
         let context = Context {
@@ -70,10 +70,10 @@ impl Surface {
 
 pub struct Context {
     pub shader_preprocessor: crate::shader::Preprocessor,
-    gl_context: GL33,
+    gl_context: Backend,
 }
 
-pub type BackBuffer = Framebuffer<GL33, Dim2, (), ()>;
+pub type BackBuffer = Framebuffer<Dim2, (), ()>;
 
 impl Context {
     /// Get access to the back buffer.
@@ -86,7 +86,7 @@ impl Context {
 }
 
 unsafe impl luminance::context::GraphicsContext for Context {
-    type Backend = GL33;
+    type Backend = Backend;
 
     fn backend(&mut self) -> &mut Self::Backend {
         &mut self.gl_context

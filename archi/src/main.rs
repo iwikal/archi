@@ -6,7 +6,7 @@ use glutin::{
     event::{DeviceEvent, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
-use luminance::context::GraphicsContext;
+use luminance_front::context::GraphicsContext;
 
 mod shader;
 
@@ -47,7 +47,7 @@ fn main() -> anyhow::Result<()> {
     let mut on_event = move |event: Event<()>,
                              control_flow: &mut ControlFlow|
           -> anyhow::Result<()> {
-        *control_flow = input(&event, &mut state)?;
+        *control_flow = input(&event, &mut state);
 
         match event {
             Event::NewEvents(..) => {
@@ -129,43 +129,42 @@ fn draw(
     let mut pipeline_gate = context.new_pipeline_gate();
 
     let ocean_frame = match render_stuff {
-        true => Some(ocean.simulate(&mut pipeline_gate, t)),
+        true => Some(ocean.simulate(&mut pipeline_gate, t)?),
         false => None,
     };
 
-    use luminance::pipeline::PipelineState;
+    use luminance_front::pipeline::PipelineState;
 
-    pipeline_gate.pipeline(
-        &back_buffer,
-        &PipelineState::new().enable_srgb(true),
-        |pipeline, mut shader_gate| {
-            let view = camera.view();
-            let projection = camera.projection();
+    pipeline_gate
+        .pipeline(
+            &back_buffer,
+            &PipelineState::new().enable_srgb(true),
+            |pipeline, mut shader_gate| {
+                let view = camera.view();
+                let projection = camera.projection();
 
-            let view_projection = projection * view;
+                let view_projection = projection * view;
 
-            if let Some(mut ocean_frame) = ocean_frame {
-                ocean_frame.render(
-                    &pipeline,
-                    &mut shader_gate,
-                    view_projection,
-                    camera.position(),
-                    None,
-                    *exposure,
-                );
-            }
+                if let Some(mut ocean_frame) = ocean_frame {
+                    ocean_frame.render(
+                        &pipeline,
+                        &mut shader_gate,
+                        view_projection,
+                        camera.position(),
+                        None,
+                        *exposure,
+                    )?;
+                }
 
-            skybox.render(&mut shader_gate, view, projection, *exposure);
-        },
-    )?;
+                skybox.render(&mut shader_gate, view, projection, *exposure)
+            },
+        )
+        .into_result()?;
 
     Ok(())
 }
 
-fn input(
-    event: &Event<()>,
-    state: &mut AppState,
-) -> anyhow::Result<ControlFlow> {
+fn input(event: &Event<()>, state: &mut AppState) -> ControlFlow {
     state.movement.update(&event);
 
     match event {
@@ -204,7 +203,7 @@ fn input(
                 state.render_stuff = !state.render_stuff;
             }
             (Some(VirtualKeyCode::Escape), _) => {
-                return Ok(ControlFlow::Exit);
+                return ControlFlow::Exit;
             }
             _ => {}
         },
@@ -214,5 +213,5 @@ fn input(
         _ => {}
     }
 
-    Ok(ControlFlow::Poll)
+    ControlFlow::Poll
 }

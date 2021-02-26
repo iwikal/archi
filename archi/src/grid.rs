@@ -1,12 +1,11 @@
 use crate::context::Context;
-use luminance::context::GraphicsContext;
-use luminance::tess::{Mode, Tess};
-use luminance_gl::GL33;
+use luminance_front::context::GraphicsContext;
+use luminance_front::tess::{Mode, Tess};
 
 pub fn square_patch_grid(
     context: &mut Context,
     side_length: u32,
-) -> anyhow::Result<Tess<GL33, (), u32>> {
+) -> anyhow::Result<Tess<(), u32>> {
     let indices = {
         let capacity = {
             let side_length = side_length as usize;

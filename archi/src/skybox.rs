@@ -1,13 +1,12 @@
 use crate::context::Context;
-use luminance::{
+use luminance_derive::{Semantics, UniformInterface, Vertex};
+use luminance_front::{
     depth_test::DepthComparison,
     render_state::RenderState,
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::{Mode, Tess, TessBuilder},
 };
-use luminance_derive::{Semantics, UniformInterface, Vertex};
-use luminance_gl::GL33;
 
 #[derive(UniformInterface)]
 pub struct SkyboxShaderInterface {
@@ -15,10 +14,10 @@ pub struct SkyboxShaderInterface {
     exposure: Uniform<f32>,
 }
 
-type SkyboxShader = Program<GL33, (), (), SkyboxShaderInterface>;
+type SkyboxShader = Program<(), (), SkyboxShaderInterface>;
 
 pub struct Skybox {
-    tess: Tess<GL33, CubeVertex, u32>,
+    tess: Tess<CubeVertex, u32>,
     shader: SkyboxShader,
 }
 
@@ -111,11 +110,11 @@ impl Skybox {
 
     pub fn render(
         &mut self,
-        shader_gate: &mut ShadingGate<Context>,
+        shader_gate: &mut ShadingGate,
         view: glm::Mat4,
         projection: glm::Mat4,
         exposure: f32,
-    ) {
+    ) -> anyhow::Result<()> {
         let Self { shader, tess } = self;
 
         let mut view = view;
@@ -132,9 +131,7 @@ impl Skybox {
 
             let state = RenderState::default()
                 .set_depth_test(DepthComparison::LessOrEqual);
-            render_gate.render(&state, |mut tess_gate| {
-                tess_gate.render(&*tess);
-            });
+            render_gate.render(&state, |mut tess_gate| tess_gate.render(&*tess))
         })
     }
 }

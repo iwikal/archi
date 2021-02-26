@@ -35,8 +35,9 @@ vec3 atmosphere(vec3 r, vec3 r0, vec3 pSun, float iSun, float rPlanet, float rAt
     float mu = dot(r, pSun);
     float mumu = mu * mu;
     float gg = g * g;
-    float pRlh = 3.0 / (8.0 * TAU) * (1.0 + mumu);
-    float pMie = 3.0 / (4.0 * TAU) * ((1.0 - gg) * (mumu + 1.0)) / (pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg));
+    float pRlh = 3.0 * (1.0 + mumu) / (8.0 * TAU);
+    float pMie = 3.0 * (1.0 - gg) * (mumu + 1.0)
+        / (4.0 * TAU * pow(1.0 + gg - 2.0 * mu * g, 1.5) * (2.0 + gg));
 
     // Sample the primary ray.
     for (int i = 0; i < iSteps; i++) {

@@ -1,6 +1,6 @@
 use crate::context::Context;
 use image::GenericImageView;
-use luminance::{
+use luminance_front::{
     pipeline::{Pipeline, TextureBinding},
     pixel::{Floating, R32F},
     shader::{

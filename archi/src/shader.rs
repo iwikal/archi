@@ -1,13 +1,14 @@
 use crate::context::Context;
 use anyhow::Context as _;
-use luminance::context::GraphicsContext;
-use luminance::shader::{BuiltProgram, Program};
-use luminance::shader::{StageType, TessellationStages};
-use luminance_gl::GL33;
+use luminance_front::context::GraphicsContext;
+use luminance_front::shader::{
+    BuiltProgram, Program, Stage, StageType, TessellationStages,
+    UniformInterface,
+};
+use luminance_front::vertex::Semantics;
+use luminance_front::Backend;
 
 mod preprocessor;
-
-type Stage = luminance::shader::Stage<GL33>;
 
 pub struct Preprocessor {
     inner: preprocessor::Preprocessor,
@@ -107,10 +108,10 @@ pub fn from_sources<Sem, Out, Uni>(
     vert: ShaderSource,
     geom: Option<ShaderSource>,
     frag: ShaderSource,
-) -> anyhow::Result<Program<GL33, Sem, Out, Uni>>
+) -> anyhow::Result<Program<Sem, Out, Uni>>
 where
-    Sem: luminance::vertex::Semantics,
-    Uni: luminance::shader::UniformInterface<GL33>,
+    Sem: Semantics,
+    Uni: UniformInterface<Backend>,
 {
     let (tess_stage, vert_stage, geom_stage, frag_stage) = compile_stages(
         context,

@@ -1,5 +1,6 @@
 use crate::context::Context;
-use luminance::{
+use luminance_derive::UniformInterface;
+use luminance_front::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
     pipeline::{PipelineGate, TextureBinding},
@@ -8,16 +9,17 @@ use luminance::{
     tess::{Mode, Tess},
     texture::{Dim2, GenMipmaps, Texture},
 };
-use luminance_derive::UniformInterface;
-use luminance_gl::GL33;
 use std::f32::consts::TAU;
 
 const QUAD_VS_SRC: crate::shader::ShaderSource =
     crate::shader_source!("./shaders/quad.vert");
 
-type TwiddleTexture = Texture<GL33, Dim2, RGBA32F>;
+type TwiddleTexture = Texture<Dim2, RGBA32F>;
 
-pub fn twiddle_indices(context: &mut Context, size: u32) -> TwiddleTexture {
+pub fn twiddle_indices(
+    context: &mut Context,
+    size: u32,
+) -> anyhow::Result<TwiddleTexture> {
     use luminance::texture::{MagFilter, MinFilter, Sampler};
     let mut sampler = Sampler::default();
     sampler.mag_filter = MagFilter::Nearest;
@@ -27,8 +29,7 @@ pub fn twiddle_indices(context: &mut Context, size: u32) -> TwiddleTexture {
     let bits = nf.log2() as u32;
     let width = bits;
     let height = size;
-    let mut texture =
-        Texture::new(context, [width, height], 0, sampler).unwrap();
+    let mut texture = Texture::new(context, [width, height], 0, sampler)?;
 
     let length = width * height;
     let mut pixels = Vec::with_capacity(length as usize);
@@ -60,9 +61,9 @@ pub fn twiddle_indices(context: &mut Context, size: u32) -> TwiddleTexture {
         }
     }
 
-    texture.upload(GenMipmaps::No, &pixels).unwrap();
+    texture.upload(GenMipmaps::No, &pixels)?;
 
-    texture
+    Ok(texture)
 }
 
 #[derive(UniformInterface)]
@@ -79,8 +80,8 @@ struct InversionInterface {
     n: Uniform<u32>,
 }
 
-pub type FftTexture = Texture<GL33, Dim2, RGBA32F>;
-pub type FftFramebuffer = Framebuffer<GL33, Dim2, RGBA32F, ()>;
+pub type FftTexture = Texture<Dim2, RGBA32F>;
+pub type FftFramebuffer = Framebuffer<Dim2, RGBA32F, ()>;
 
 pub fn fft_framebuffer(
     context: &mut Context,
@@ -100,15 +101,15 @@ pub fn fft_framebuffer(
 pub struct Fft {
     width: u32,
     twiddle_indices: TwiddleTexture,
-    butterfly_shader: Program<GL33, (), (), ButterflyInterface>,
-    inversion_shader: Program<GL33, (), (), InversionInterface>,
+    butterfly_shader: Program<(), (), ButterflyInterface>,
+    inversion_shader: Program<(), (), InversionInterface>,
     pingpong_buffers: [FftFramebuffer; 2],
-    tess: Tess<GL33, ()>,
+    tess: Tess<()>,
 }
 
 impl Fft {
     pub fn new(context: &mut Context, width: u32) -> anyhow::Result<Self> {
-        let twiddle_indices = twiddle_indices(context, width);
+        let twiddle_indices = twiddle_indices(context, width)?;
 
         let butterfly_shader = crate::shader::from_sources(
             context,
@@ -149,9 +150,9 @@ impl Fft {
 
     pub fn render<'a>(
         &'a mut self,
-        pipeline_gate: &mut PipelineGate<Context>,
+        pipeline_gate: &mut PipelineGate,
         freq_texture: &mut FftTexture,
-    ) -> &'a mut FftTexture {
+    ) -> anyhow::Result<&'a mut FftTexture> {
         let Self {
             width,
             tess,
@@ -187,11 +188,10 @@ impl Fft {
                     .pipeline(
                         out_buffer,
                         &Default::default(),
-                        |pipeline, mut shader_gate| {
+                        |pipeline, mut shader_gate| -> anyhow::Result<()> {
                             let bound_twiddle =
-                                pipeline.bind_texture(twiddle_indices).unwrap();
-                            let bound_input =
-                                pipeline.bind_texture(texture).unwrap();
+                                pipeline.bind_texture(twiddle_indices)?;
+                            let bound_input = pipeline.bind_texture(texture)?;
                             shader_gate.shade(
                                 butterfly_shader,
                                 |mut iface, uni, mut render_gate| {
@@ -208,14 +208,14 @@ impl Fft {
                                     render_gate.render(
                                         &Default::default(),
                                         |mut tess_gate| {
-                                            tess_gate.render(&*tess);
+                                            tess_gate.render(&*tess)
                                         },
-                                    );
+                                    )
                                 },
-                            );
+                            )
                         },
                     )
-                    .unwrap();
+                    .into_result()?;
 
                 pingpong_buffers = [out_buffer, in_buffer];
             }
@@ -229,9 +229,8 @@ impl Fft {
                 .pipeline(
                     out_buffer,
                     &Default::default(),
-                    |pipeline, mut shader_gate| {
-                        let bound_input =
-                            pipeline.bind_texture(texture).unwrap();
+                    |pipeline, mut shader_gate| -> anyhow::Result<()> {
+                        let bound_input = pipeline.bind_texture(texture)?;
                         shader_gate.shade(
                             inversion_shader,
                             |mut iface, uni, mut render_gate| {
@@ -242,17 +241,15 @@ impl Fft {
                                 iface.set(&uni.n, *width);
                                 render_gate.render(
                                     &Default::default(),
-                                    |mut tess_gate| {
-                                        tess_gate.render(&*tess);
-                                    },
-                                );
+                                    |mut tess_gate| tess_gate.render(&*tess),
+                                )
                             },
-                        );
+                        )
                     },
                 )
-                .unwrap();
+                .into_result()?;
 
-            out_buffer.color_slot()
+            Ok(out_buffer.color_slot())
         }
     }
 }

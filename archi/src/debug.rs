@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use crate::context::Context;
-use luminance::{
+use luminance_derive::UniformInterface;
+use luminance_front::{
     context::GraphicsContext,
     pipeline::{Pipeline, TextureBinding},
     pixel::{Floating, RGBA32F},
@@ -9,8 +10,6 @@ use luminance::{
     tess::{Mode, Tess},
     texture::{Dim2, Texture},
 };
-use luminance_derive::UniformInterface;
-use luminance_gl::GL33;
 
 pub mod glerr;
 
@@ -25,8 +24,8 @@ pub struct DebugShaderInterface {
 }
 
 pub struct Debugger {
-    shader: Program<GL33, (), (), DebugShaderInterface>,
-    tess: Tess<GL33, ()>,
+    shader: Program<(), (), DebugShaderInterface>,
+    tess: Tess<()>,
 }
 
 impl Debugger {
@@ -50,12 +49,12 @@ impl Debugger {
 
     pub fn render(
         &mut self,
-        pipeline: &Pipeline<GL33>,
-        shader_gate: &mut ShadingGate<Context>,
+        pipeline: &Pipeline,
+        shader_gate: &mut ShadingGate,
         view_projection: impl Into<M44>,
         model: impl Into<M44>,
-        texture: Option<&mut Texture<GL33, Dim2, RGBA32F>>,
-    ) {
+        texture: Option<&mut Texture<Dim2, RGBA32F>>,
+    ) -> anyhow::Result<()> {
         let Self { shader, tess } = self;
 
         shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
@@ -63,13 +62,13 @@ impl Debugger {
             iface.set(&uni.model, model.into());
 
             if let Some(texture) = texture {
-                let bound_texture = pipeline.bind_texture(texture).unwrap();
+                let bound_texture = pipeline.bind_texture(texture)?;
                 iface.set(&uni.input_texture, bound_texture.binding());
             }
 
             render_gate.render(&Default::default(), |mut tess_gate| {
-                tess_gate.render(&*tess);
-            });
+                tess_gate.render(&*tess)
+            })
         })
     }
 }
