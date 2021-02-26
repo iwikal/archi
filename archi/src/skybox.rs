@@ -2,10 +2,12 @@ use crate::context::Context;
 use luminance_derive::{Semantics, UniformInterface, Vertex};
 use luminance_front::{
     depth_test::DepthComparison,
+    pixel::RGB8UI,
     render_state::RenderState,
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::{Mode, Tess, TessBuilder},
+    texture::{Dim1, Texture},
 };
 
 #[derive(UniformInterface)]
@@ -15,10 +17,13 @@ pub struct SkyboxShaderInterface {
 }
 
 type SkyboxShader = Program<(), (), SkyboxShaderInterface>;
+type LutTexture = Texture<Dim1, RGB8UI>;
 
 pub struct Skybox {
     tess: Tess<CubeVertex, u32>,
     shader: SkyboxShader,
+    mie_lut: LutTexture,
+    rayleigh_lut: LutTexture,
 }
 
 #[derive(Debug, Clone, Copy, Semantics)]
@@ -105,7 +110,22 @@ impl Skybox {
             crate::shader_source!("./shaders/skybox.frag"),
         )?;
 
-        Ok(Self { shader, tess })
+        Ok(Self {
+            shader,
+            tess,
+            mie_lut: Self::mie_lut(context)?,
+            rayleigh_lut: Self::rayleigh_lut(context)?,
+        })
+    }
+
+    fn mie_lut(context: &mut Context) -> anyhow::Result<LutTexture> {
+        let mut texture = Texture::new(context, 100, 0, Default::default())?;
+        Ok(texture)
+    }
+
+    fn rayleigh_lut(context: &mut Context) -> anyhow::Result<LutTexture> {
+        let mut texture = Texture::new(context, 100, 0, Default::default())?;
+        Ok(texture)
     }
 
     pub fn render(
@@ -115,7 +135,12 @@ impl Skybox {
         projection: glm::Mat4,
         exposure: f32,
     ) -> anyhow::Result<()> {
-        let Self { shader, tess } = self;
+        let Self {
+            shader,
+            tess,
+            mie_lut,
+            rayleigh_lut,
+        } = self;
 
         let mut view = view;
 
