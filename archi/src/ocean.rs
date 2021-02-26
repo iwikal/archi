@@ -67,9 +67,11 @@ impl H0k {
 
         let input_texture = {
             use luminance::texture::{MagFilter, MinFilter, Sampler};
-            let mut sampler = Sampler::default();
-            sampler.mag_filter = MagFilter::Nearest;
-            sampler.min_filter = MinFilter::Nearest;
+            let sampler = Sampler {
+                mag_filter: MagFilter::Nearest,
+                min_filter: MinFilter::Nearest,
+                ..Default::default()
+            };
 
             let mut input_texture = Texture::new(context, size, 0, sampler)?;
             let length = N * N;
@@ -178,11 +180,6 @@ impl Hkt {
             None,
             crate::shader_source!("./shaders/hkt.frag"),
         )?;
-
-        use luminance::texture::{MagFilter, MinFilter, Sampler};
-        let mut sampler = Sampler::default();
-        sampler.mag_filter = MagFilter::Nearest;
-        sampler.min_filter = MinFilter::Nearest;
 
         let tess = quad_tess(context)?;
 
@@ -293,7 +290,8 @@ impl Ocean {
         time: f32,
     ) -> anyhow::Result<OceanFrame> {
         let heightmap = {
-            self.hkt.render(pipeline_gate, time, &mut self.h0k_texture);
+            self.hkt
+                .render(pipeline_gate, time, &mut self.h0k_texture)?;
             self.fft
                 .render(pipeline_gate, self.hkt.framebuffer.color_slot())?
         };

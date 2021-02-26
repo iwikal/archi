@@ -21,9 +21,11 @@ pub fn twiddle_indices(
     size: u32,
 ) -> anyhow::Result<TwiddleTexture> {
     use luminance::texture::{MagFilter, MinFilter, Sampler};
-    let mut sampler = Sampler::default();
-    sampler.mag_filter = MagFilter::Nearest;
-    sampler.min_filter = MinFilter::Nearest;
+    let sampler = Sampler {
+        mag_filter: MagFilter::Nearest,
+        min_filter: MinFilter::Nearest,
+        ..Default::default()
+    };
 
     let nf = size as f32;
     let bits = nf.log2() as u32;
