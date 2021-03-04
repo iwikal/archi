@@ -2,9 +2,6 @@
 #define iSteps 16
 #define jSteps 8
 
-uniform sampler2D mie_lut;
-uniform sampler2D rayleigh_lut;
-
 float rsi(vec3 r0, vec3 rd, float sr) {
     // Simplified ray-sphere intersection that assumes
     // the ray starts inside the sphere and that the
@@ -15,19 +12,7 @@ float rsi(vec3 r0, vec3 rd, float sr) {
     return (-b + sqrt((b*b) - 4.0*a*c))/(2.0*a);
 }
 
-vec3 atmosphere(
-        vec3 r,
-        vec3 r0,
-        vec3 pSun,
-        float iSun,
-        float rPlanet,
-        float rAtmos,
-        vec3 kRlh,
-        float kMie,
-        float shRlh,
-        float shMie,
-        float g
-) {
+vec3 atmosphere(vec3 r, vec3 r0, vec3 pSun, float iSun, float rPlanet, float rAtmos, vec3 kRlh, float kMie, float shRlh, float shMie, float g) {
     // Normalize the sun and view directions.
     pSun = normalize(pSun);
     r = normalize(r);
@@ -39,8 +24,8 @@ vec3 atmosphere(
     float iTime = 0.0;
 
     // Initialize accumulators for Rayleigh and Mie scattering.
-    vec3 totalRlh = vec3(0, 0, 0);
-    vec3 totalMie = vec3(0, 0, 0);
+    vec3 totalRlh = vec3(0,0,0);
+    vec3 totalMie = vec3(0,0,0);
 
     // Initialize optical depth accumulators for the primary ray.
     float iOdRlh = 0.0;
