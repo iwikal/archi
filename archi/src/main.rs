@@ -139,7 +139,7 @@ fn draw(
         .pipeline(
             &back_buffer,
             &PipelineState::new().enable_srgb(true),
-            |pipeline, mut shader_gate| {
+            |mut pipeline, mut shader_gate| {
                 let view = camera.view();
                 let projection = camera.projection();
 
@@ -151,12 +151,18 @@ fn draw(
                         &mut shader_gate,
                         view_projection,
                         camera.position(),
-                        None,
+                        Some(&mut skybox.sky_texture),
                         *exposure,
                     )?;
                 }
 
-                skybox.render(&mut shader_gate, view, projection, *exposure)
+                skybox.render(
+                    &mut pipeline,
+                    &mut shader_gate,
+                    view,
+                    projection,
+                    *exposure,
+                )
             },
         )
         .into_result()?;

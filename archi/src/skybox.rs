@@ -2,14 +2,18 @@ use crate::context::Context;
 use luminance_derive::{Semantics, UniformInterface, Vertex};
 use luminance_front::{
     depth_test::DepthComparison,
+    pipeline::{Pipeline, TextureBinding},
+    pixel::{Floating, RGB32F},
     render_state::RenderState,
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::{Mode, Tess, TessBuilder},
+    texture::{Dim2, Sampler, Texture, Wrap},
 };
 
 #[derive(UniformInterface)]
 pub struct SkyboxShaderInterface {
+    sky_texture: Uniform<TextureBinding<Dim2, Floating>>,
     view_projection: Uniform<[[f32; 4]; 4]>,
     exposure: Uniform<f32>,
 }
@@ -17,6 +21,7 @@ pub struct SkyboxShaderInterface {
 type SkyboxShader = Program<(), (), SkyboxShaderInterface>;
 
 pub struct Skybox {
+    pub sky_texture: Texture<Dim2, RGB32F>,
     tess: Tess<CubeVertex, u32>,
     shader: SkyboxShader,
 }
@@ -43,6 +48,39 @@ pub struct ImageData {
     pub width: usize,
     pub height: usize,
     pub data: Vec<(f32, f32, f32)>,
+}
+
+fn load_sky(context: &mut Context) -> anyhow::Result<Texture<Dim2, RGB32F>> {
+    let file: &[u8] = include_bytes!("../assets/colorful_studio_8k.hdr");
+    let mut loader = radiant::Loader::new(file)?.scanlines();
+
+    let width = loader.width as u32;
+    let height = loader.height as u32;
+
+    let mut buf = vec![radiant::Rgb::zero(); loader.width];
+
+    let mut texture = Texture::new(
+        context,
+        [width, height],
+        0,
+        Sampler {
+            wrap_r: Wrap::Repeat,
+            wrap_s: Wrap::ClampToEdge,
+            ..Default::default()
+        },
+    )?;
+
+    for y in 0..height {
+        loader.read_scanline(&mut buf)?;
+        texture.upload_part_raw(
+            luminance::texture::GenMipmaps::No,
+            [0, y],
+            [width, 1],
+            bytemuck::cast_slice(&buf),
+        )?;
+    }
+
+    Ok(texture)
 }
 
 impl Skybox {
@@ -105,17 +143,28 @@ impl Skybox {
             crate::shader_source!("./shaders/skybox.frag"),
         )?;
 
-        Ok(Self { shader, tess })
+        let sky_texture = load_sky(context)?;
+
+        Ok(Self {
+            shader,
+            tess,
+            sky_texture,
+        })
     }
 
     pub fn render(
         &mut self,
+        pipeline: &mut Pipeline,
         shader_gate: &mut ShadingGate,
         view: glm::Mat4,
         projection: glm::Mat4,
         exposure: f32,
     ) -> anyhow::Result<()> {
-        let Self { shader, tess } = self;
+        let Self {
+            shader,
+            tess,
+            sky_texture,
+        } = self;
 
         let mut view = view;
 
@@ -124,8 +173,10 @@ impl Skybox {
         view[14] = 0.0;
 
         let view_projection = projection * view;
+        let sky_texture = pipeline.bind_texture(sky_texture)?;
 
         shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
+            iface.set(&uni.sky_texture, sky_texture.binding());
             iface.set(&uni.view_projection, view_projection.into());
             iface.set(&uni.exposure, exposure);
 

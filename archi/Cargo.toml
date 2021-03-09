@@ -17,3 +17,5 @@ luminance-derive = "0.6.3"
 luminance-gl = "0.16.1"
 nalgebra-glm = "*"
 rand = "*"
+radiant = { path = "../../radiant" }
+bytemuck = "*"

@@ -1,5 +1,5 @@
 #pragma include "tonemap.glsl"
-#pragma include "atmosphere.glsl"
+#pragma include "equirectangular.glsl"
 
 layout (location = 0) in vec2 uv;
 layout (location = 1) in vec3 position;
@@ -13,19 +13,8 @@ uniform sampler2D sky_texture;
 uniform float exposure;
 
 vec3 sky(vec3 direction) {
-  vec3 atmosphere_color = atmosphere(
-      direction,                      // normalized ray direction
-      vec3(0,6372e3,0),               // ray origin
-      vec3(0.0, 0.0, -1.0),           // position of the sun
-      22.0,                           // intensity of the sun
-      6371e3,                         // radius of the planet in meters
-      6471e3,                         // radius of the atmosphere in meters
-      vec3(5.5e-6, 13.0e-6, 22.4e-6), // Rayleigh scattering coefficient
-      21e-6,                          // Mie scattering coefficient
-      8e3,                            // Rayleigh scale height
-      1.2e3,                          // Mie scale height
-      0.758                           // Mie preferred scattering direction
-  );
+  vec2 uv = equirectangular(normalize(direction));
+  vec3 atmosphere_color = texture(sky_texture, uv).rgb;
 
   return tonemap(atmosphere_color, exposure);
 }

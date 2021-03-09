@@ -35,6 +35,7 @@ impl Preprocessor {
         add_source!("./shaders/include/complex.glsl");
         add_source!("./shaders/include/tonemap.glsl");
         add_source!("./shaders/include/atmosphere.glsl");
+        add_source!("./shaders/include/equirectangular.glsl");
 
         Self { inner }
     }
