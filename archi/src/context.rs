@@ -21,6 +21,7 @@ impl Surface {
             .with_visible(false);
 
         let window_context = glutin::ContextBuilder::new()
+            .with_vsync(true)
             .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 3)))
             .with_gl_profile(glutin::GlProfile::Core)
             .build_windowed(window_builder, event_loop)

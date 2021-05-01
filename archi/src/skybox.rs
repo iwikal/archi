@@ -146,9 +146,9 @@ impl Skybox {
         let sky_texture = load_sky(context)?;
 
         Ok(Self {
-            shader,
-            tess,
             sky_texture,
+            tess,
+            shader,
         })
     }
 

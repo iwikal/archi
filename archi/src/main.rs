@@ -19,8 +19,18 @@ mod input;
 mod ocean;
 mod skybox;
 
+fn start_loading() -> std::time::Instant {
+    eprintln!("loading...");
+    std::time::Instant::now()
+}
+
+fn finish_loading(start: std::time::Instant) {
+    let loading_duration = start.elapsed();
+    eprintln!("finished loading in {:.2}s", loading_duration.as_secs_f32());
+}
+
 fn main() -> anyhow::Result<()> {
-    eprintln!("running!");
+    let loading_start = start_loading();
 
     let event_loop = EventLoop::new();
     let (mut context, mut surface) = context::Surface::new(&event_loop);
@@ -88,6 +98,8 @@ fn main() -> anyhow::Result<()> {
 
         Ok(())
     };
+
+    finish_loading(loading_start);
 
     event_loop.run(move |event, _, control_flow| {
         match on_event(event, control_flow).context("Failed to process event") {
