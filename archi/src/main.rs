@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
         skybox: skybox::Skybox::new(&mut context)?,
         ocean: ocean::Ocean::new(&mut context)?,
         exposure: 0.2,
-        render_stuff: true,
+        render_water: true,
     };
 
     let mut on_event = move |event: Event<()>,
@@ -119,7 +119,7 @@ struct AppState {
     exposure: f32,
     movement: input::Movement,
     ocean: ocean::Ocean,
-    render_stuff: bool,
+    render_water: bool,
     skybox: skybox::Skybox,
 }
 
@@ -133,14 +133,14 @@ fn draw(
         camera,
         exposure,
         ocean,
-        render_stuff,
+        render_water,
         skybox,
         ..
     } = state;
 
     let mut pipeline_gate = context.new_pipeline_gate();
 
-    let ocean_frame = match render_stuff {
+    let ocean_frame = match render_water {
         true => Some(ocean.simulate(&mut pipeline_gate, t)?),
         false => None,
     };
@@ -218,7 +218,7 @@ fn input(event: &Event<()>, state: &mut AppState) -> ControlFlow {
             ..
         } => match (virtual_keycode, scancode) {
             (_, 18) => {
-                state.render_stuff = !state.render_stuff;
+                state.render_water = !state.render_water;
             }
             (Some(VirtualKeyCode::Escape), _) => {
                 return ControlFlow::Exit;
