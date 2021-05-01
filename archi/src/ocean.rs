@@ -39,7 +39,7 @@ type H0kTexture = Texture<Dim2, RGBA32F>;
 
 struct H0k {
     tess: Tess<()>,
-    input_texture: Texture<Dim2, RGBA32F>,
+    noise: Texture<Dim2, RGBA32F>,
     shader: Program<(), (), H0kInterface>,
     framebuffer: Framebuffer<Dim2, RGBA32F, ()>,
     scale: i32,
@@ -65,7 +65,7 @@ impl H0k {
             crate::shader_source!("./shaders/h0k.frag"),
         )?;
 
-        let input_texture = {
+        let noise = {
             use luminance::texture::{MagFilter, MinFilter, Sampler};
             let sampler = Sampler {
                 mag_filter: MagFilter::Nearest,
@@ -73,7 +73,7 @@ impl H0k {
                 ..Default::default()
             };
 
-            let mut input_texture = Texture::new(context, size, 0, sampler)?;
+            let mut texture = Texture::new(context, size, 0, sampler)?;
             let length = N * N;
             let mut pixels = Vec::with_capacity(length as usize);
             let mut rng = rand::thread_rng();
@@ -82,15 +82,15 @@ impl H0k {
                 pixels.push(rng.gen());
             }
 
-            input_texture.upload(GenMipmaps::No, &pixels)?;
-            input_texture
+            texture.upload(GenMipmaps::No, &pixels)?;
+            texture
         };
 
         let tess = quad_tess(context)?;
 
         Ok(Self {
             tess,
-            input_texture,
+            noise,
             shader,
             framebuffer,
             scale: N as _,
@@ -107,7 +107,7 @@ impl H0k {
     ) -> anyhow::Result<&mut H0kTexture> {
         let Self {
             framebuffer,
-            input_texture,
+            noise,
             shader,
             tess,
             scale,
@@ -123,7 +123,7 @@ impl H0k {
                 &*framebuffer,
                 &Default::default(),
                 |pipeline, mut shader_gate| -> anyhow::Result<()> {
-                    let bound_noise = pipeline.bind_texture(input_texture)?;
+                    let bound_noise = pipeline.bind_texture(noise)?;
                     shader_gate.shade(
                         shader,
                         |mut iface, uni, mut render_gate| {
@@ -194,7 +194,7 @@ impl Hkt {
         &mut self,
         pipline_gate: &mut PipelineGate,
         time: f32,
-        input_texture: &mut H0kTexture,
+        h0k_texture: &mut H0kTexture,
     ) -> anyhow::Result<&HktTexture> {
         let Self {
             framebuffer,
@@ -208,12 +208,11 @@ impl Hkt {
                 &framebuffer,
                 &Default::default(),
                 |pipeline, mut shader_gate| -> anyhow::Result<()> {
-                    let bound_noise = pipeline.bind_texture(input_texture)?;
+                    let bound_h0k = pipeline.bind_texture(h0k_texture)?;
                     shader_gate.shade(
                         shader,
                         |mut iface, uni, mut render_gate| {
-                            iface
-                                .set(&uni.input_texture, bound_noise.binding());
+                            iface.set(&uni.input_texture, bound_h0k.binding());
                             iface.set(&uni.n, N as i32);
                             iface.set(&uni.time, time);
                             render_gate
