@@ -11,7 +11,7 @@ void main() {
   position.z = 0.0;
   position.w = 1.0;
 
-  uv = position.xy;
+  uv = vec2(gl_VertexID % 2, gl_VertexID / 2);
 
   gl_Position = view_projection * model * position;
 }

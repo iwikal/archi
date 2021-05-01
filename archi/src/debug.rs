@@ -17,7 +17,6 @@ type M44 = [[f32; 4]; 4];
 
 #[derive(UniformInterface)]
 pub struct DebugShaderInterface {
-    #[uniform(unbound)]
     input_texture: Uniform<TextureBinding<Dim2, Floating>>,
     view_projection: Uniform<M44>,
     model: Uniform<M44>,
