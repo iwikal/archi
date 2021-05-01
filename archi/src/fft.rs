@@ -1,4 +1,5 @@
 use crate::context::Context;
+use luminance::texture::Sampler;
 use luminance_derive::UniformInterface;
 use luminance_front::{
     context::GraphicsContext,
@@ -16,11 +17,11 @@ const QUAD_VS_SRC: crate::shader::ShaderSource =
 
 type TwiddleTexture = Texture<Dim2, RGBA32F>;
 
-pub fn twiddle_indices(
+fn twiddle_indices(
     context: &mut Context,
     size: u32,
 ) -> anyhow::Result<TwiddleTexture> {
-    use luminance::texture::{MagFilter, MinFilter, Sampler};
+    use luminance::texture::{MagFilter, MinFilter};
     let sampler = Sampler {
         mag_filter: MagFilter::Nearest,
         min_filter: MinFilter::Nearest,
@@ -28,10 +29,10 @@ pub fn twiddle_indices(
     };
 
     let nf = size as f32;
-    let bits = nf.log2() as u32;
-    let width = bits;
+    let stages = nf.log2() as u32;
+    let width = stages;
     let height = size;
-    let mut texture = Texture::new(context, [width, height], 0, sampler)?;
+    let mut texture = context.new_texture([width, height], 0, sampler)?;
 
     let length = width * height;
     let mut pixels = Vec::with_capacity(length as usize);
@@ -46,7 +47,7 @@ pub fn twiddle_indices(
 
             let top_wing = y % index < span;
 
-            let reverse = |i: u32| i.reverse_bits().rotate_left(bits);
+            let reverse = |i: u32| i.reverse_bits().rotate_left(stages);
 
             let (mut z, mut w) = if top_wing {
                 (y, y + span)
@@ -85,21 +86,6 @@ struct InversionInterface {
 pub type FftTexture = Texture<Dim2, RGBA32F>;
 pub type FftFramebuffer = Framebuffer<Dim2, RGBA32F, ()>;
 
-pub fn fft_framebuffer(
-    context: &mut Context,
-    n: u32,
-) -> anyhow::Result<FftFramebuffer> {
-    use luminance::texture::{MagFilter, MinFilter, Sampler, Wrap};
-    let sampler = Sampler {
-        wrap_s: Wrap::Repeat,
-        wrap_t: Wrap::Repeat,
-        mag_filter: MagFilter::Linear,
-        min_filter: MinFilter::LinearMipmapLinear,
-        ..Default::default()
-    };
-    Ok(FftFramebuffer::new(context, [n, n], 0, sampler)?)
-}
-
 pub struct Fft {
     width: u32,
     twiddle_indices: TwiddleTexture,
@@ -111,6 +97,24 @@ pub struct Fft {
 
 impl Fft {
     pub fn new(context: &mut Context, width: u32) -> anyhow::Result<Self> {
+        use luminance_front::texture::{MagFilter, MinFilter, Wrap};
+
+        let sampler = Sampler {
+            wrap_s: Wrap::Repeat,
+            wrap_t: Wrap::Repeat,
+            mag_filter: MagFilter::Linear,
+            min_filter: MinFilter::LinearMipmapLinear,
+            ..Default::default()
+        };
+
+        Self::with_sampler(context, width, sampler)
+    }
+
+    pub fn with_sampler(
+        context: &mut Context,
+        width: u32,
+        sampler: Sampler,
+    ) -> anyhow::Result<Self> {
         let twiddle_indices = twiddle_indices(context, width)?;
 
         let butterfly_shader = crate::shader::from_sources(
@@ -130,8 +134,8 @@ impl Fft {
         )?;
 
         let pingpong_buffers = [
-            fft_framebuffer(context, width)?,
-            fft_framebuffer(context, width)?,
+            context.new_framebuffer([width, width], 0, sampler)?,
+            context.new_framebuffer([width, width], 0, sampler)?,
         ];
 
         let tess = context
@@ -142,11 +146,11 @@ impl Fft {
 
         Ok(Self {
             width,
-            tess,
             twiddle_indices,
             butterfly_shader,
             inversion_shader,
             pingpong_buffers,
+            tess,
         })
     }
 
@@ -165,7 +169,7 @@ impl Fft {
             ..
         } = self;
 
-        let bits = (*width as f32).log2() as usize;
+        let stages = 31 - u32::leading_zeros(*width);
 
         let mut pingpong_buffers = {
             let [ping, pong] = pingpong_buffers;
@@ -175,7 +179,7 @@ impl Fft {
         let mut initial_texture = Some(freq_texture);
 
         for &direction in &[0, 1] {
-            for stage in 0..bits {
+            for stage in 0..stages {
                 let [in_buffer, out_buffer] = pingpong_buffers;
 
                 let texture = match initial_texture {
