@@ -52,7 +52,7 @@ void main() {
   uv_out /= 2.0;
 
   float height = 0.0;
-  height += texture(heightmap, uv_out).y;
+  height += texture(heightmap, uv_out).x;
 
   gl_Position = grid_position;
   gl_Position.y += height;
