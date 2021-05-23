@@ -173,6 +173,14 @@ fn draw(
                         Some(&mut skybox.sky_texture),
                         *exposure,
                     )?;
+
+                    debugger.render(
+                        &pipeline,
+                        &mut shader_gate,
+                        view_projection,
+                        glm::translation(&glm::Vec3::new(1.5, 1., -2.)),
+                        Some(&mut ocean_frame.heightmap),
+                    )?;
                 }
 
                 debugger.render(

@@ -305,7 +305,7 @@ impl Ocean {
 pub struct OceanFrame<'a> {
     shader: &'a mut OceanShader,
     tess: &'a mut Tess<(), u32>,
-    heightmap: &'a mut FftTexture,
+    pub heightmap: &'a mut FftTexture,
 }
 
 impl<'a> OceanFrame<'a> {
