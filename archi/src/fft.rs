@@ -49,18 +49,27 @@ fn twiddle_indices(
 
             let reverse = |i: u32| i.reverse_bits().rotate_left(stages);
 
-            let (mut z, mut w) = if top_wing {
+            let (mut twiddle_u, mut twiddle_v) = if top_wing {
                 (y, y + span)
             } else {
                 (y - span, y)
             };
 
+            // reverse twiddle indices on the first iteration
             if x == 0 {
-                z = reverse(z);
-                w = reverse(w);
+                twiddle_u = reverse(twiddle_u);
+                twiddle_v = reverse(twiddle_v);
             }
 
-            pixels.push((t.cos(), t.sin(), z as f32, w as f32));
+            let omega_real = t.cos();
+            let omega_imag = t.sin();
+
+            pixels.push((
+                omega_real,
+                omega_imag,
+                twiddle_u as f32,
+                twiddle_v as f32,
+            ));
         }
     }
 
