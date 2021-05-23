@@ -8,6 +8,7 @@ out vec4 frag;
 void main() {
   vec2 xy = gl_FragCoord.xy - 0.5;
 
+  // negate every other pixel in a checkerboard-like pattern
   float perm = mod(dot(xy, xy), 2) * -2.0 + 1.0;
 
   float h = texture(input_texture, uv).x;

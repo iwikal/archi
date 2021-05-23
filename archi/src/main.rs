@@ -16,6 +16,7 @@ mod debug;
 mod fft;
 mod grid;
 mod input;
+mod noise;
 mod ocean;
 mod skybox;
 
@@ -45,6 +46,8 @@ fn main() -> anyhow::Result<()> {
     surface.ctx.window().set_visible(true);
 
     let mut state = AppState {
+        debugger: debug::Debugger::new(&mut context)?,
+        blue_noise: noise::BlueNoise::new(&mut context)?,
         back_buffer: context.back_buffer(surface.size())?,
         camera: camera::Camera::new(width, height),
         movement: input::Movement::default(),
@@ -114,6 +117,8 @@ fn main() -> anyhow::Result<()> {
 }
 
 struct AppState {
+    debugger: debug::Debugger,
+    blue_noise: noise::BlueNoise,
     back_buffer: context::BackBuffer,
     camera: camera::Camera,
     exposure: f32,
@@ -129,6 +134,8 @@ fn draw(
     state: &mut AppState,
 ) -> anyhow::Result<()> {
     let AppState {
+        debugger,
+        blue_noise,
         back_buffer,
         camera,
         exposure,
@@ -149,9 +156,9 @@ fn draw(
 
     pipeline_gate
         .pipeline(
-            &back_buffer,
+            back_buffer,
             &PipelineState::new().enable_srgb(true),
-            |mut pipeline, mut shader_gate| {
+            |mut pipeline, mut shader_gate| -> anyhow::Result<()> {
                 let view = camera.view();
                 let projection = camera.projection();
 
@@ -168,13 +175,31 @@ fn draw(
                     )?;
                 }
 
+                debugger.render(
+                    &pipeline,
+                    &mut shader_gate,
+                    view_projection,
+                    glm::translation(&glm::Vec3::new(-0.5, 1., -2.)),
+                    Some(&mut blue_noise.freq_texture),
+                )?;
+
+                debugger.render(
+                    &pipeline,
+                    &mut shader_gate,
+                    view_projection,
+                    glm::translation(&glm::Vec3::new(0.5, 1., -2.)),
+                    Some(&mut blue_noise.noise_texture),
+                )?;
+
                 skybox.render(
                     &mut pipeline,
                     &mut shader_gate,
                     view,
                     projection,
                     *exposure,
-                )
+                )?;
+
+                Ok(())
             },
         )
         .into_result()?;

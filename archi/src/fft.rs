@@ -258,4 +258,9 @@ impl Fft {
             Ok(out_buffer.color_slot())
         }
     }
+
+    pub fn into_target_texture(self) -> FftTexture {
+        let [_, buf] = self.pingpong_buffers;
+        buf.into_color_slot()
+    }
 }
