@@ -4,7 +4,7 @@ use luminance_derive::UniformInterface;
 use luminance_front::{
     context::GraphicsContext,
     pipeline::{Pipeline, TextureBinding},
-    pixel::{Floating, RGBA32F},
+    pixel::{Floating, Pixel},
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::{Mode, Tess},
@@ -46,14 +46,17 @@ impl Debugger {
         Ok(Self { shader, tess })
     }
 
-    pub fn render(
+    pub fn render<P>(
         &mut self,
         pipeline: &Pipeline,
         shader_gate: &mut ShadingGate,
         view_projection: impl Into<M44>,
         model: impl Into<M44>,
-        texture: Option<&mut Texture<Dim2, RGBA32F>>,
-    ) -> anyhow::Result<()> {
+        texture: Option<&mut Texture<Dim2, P>>,
+    ) -> anyhow::Result<()>
+    where
+        P: Pixel<SamplerType = Floating>,
+    {
         let Self { shader, tess } = self;
 
         shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
