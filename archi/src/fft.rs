@@ -5,7 +5,7 @@ use luminance_front::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
     pipeline::{PipelineGate, TextureBinding},
-    pixel::{Floating, RGBA32F},
+    pixel::{Floating, RG32F, RGBA32F},
     shader::{Program, Uniform},
     tess::{Mode, Tess},
     texture::{Dim2, GenMipmaps, Texture},
@@ -92,8 +92,8 @@ struct InversionInterface {
     n: Uniform<u32>,
 }
 
-pub type FftTexture = Texture<Dim2, RGBA32F>;
-pub type FftFramebuffer = Framebuffer<Dim2, RGBA32F, ()>;
+pub type FftTexture = Texture<Dim2, RG32F>;
+pub type FftFramebuffer = Framebuffer<Dim2, RG32F, ()>;
 
 pub struct Fft {
     width: u32,

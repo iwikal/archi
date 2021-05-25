@@ -147,7 +147,7 @@ fn draw(
 
     let mut pipeline_gate = context.new_pipeline_gate();
 
-    let ocean_frame = match render_water {
+    let mut ocean_frame = match render_water {
         true => Some(ocean.simulate(&mut pipeline_gate, t)?),
         false => None,
     };
@@ -164,7 +164,7 @@ fn draw(
 
                 let view_projection = projection * view;
 
-                if let Some(mut ocean_frame) = ocean_frame {
+                if let Some(ocean_frame) = &mut ocean_frame {
                     ocean_frame.render(
                         &pipeline,
                         &mut shader_gate,
@@ -173,31 +173,31 @@ fn draw(
                         Some(&mut skybox.sky_texture),
                         *exposure,
                     )?;
+                }
 
-                    debugger.render(
+                use luminance_front::{
+                    pixel::RG32F,
+                    texture::{Dim2, Texture},
+                };
+
+                let mut offset = -0.5;
+                let mut debug = |texture: &mut Texture<Dim2, RG32F>| {
+                    let result = debugger.render(
                         &pipeline,
                         &mut shader_gate,
                         view_projection,
-                        glm::translation(&glm::Vec3::new(1.5, 1., -2.)),
-                        Some(&mut ocean_frame.heightmap),
-                    )?;
+                        glm::translation(&glm::Vec3::new(offset, 1., -2.)),
+                        Some(texture),
+                    );
+                    offset += 1.0;
+                    result
+                };
+
+                if let Some(frame) = &mut ocean_frame {
+                    debug(frame.heightmap)?;
                 }
-
-                debugger.render(
-                    &pipeline,
-                    &mut shader_gate,
-                    view_projection,
-                    glm::translation(&glm::Vec3::new(-0.5, 1., -2.)),
-                    Some(&mut blue_noise.freq_texture),
-                )?;
-
-                debugger.render(
-                    &pipeline,
-                    &mut shader_gate,
-                    view_projection,
-                    glm::translation(&glm::Vec3::new(0.5, 1., -2.)),
-                    Some(&mut blue_noise.noise_texture),
-                )?;
+                debug(&mut blue_noise.freq_texture)?;
+                debug(&mut blue_noise.noise_texture)?;
 
                 skybox.render(
                     &mut pipeline,

@@ -6,7 +6,7 @@ in vec2 uv;
 
 uniform sampler2D input_texture;
 
-out vec4 frag;
+out vec2 frag;
 
 uniform int n = 512;
 uniform int scale = 1000;
@@ -44,6 +44,5 @@ void main(void) {
   vec2 dy = vec2(0.0, -k.y / magnitude);
   vec2 h_k_t_dz = cmul(dy, h_k_t_dy);
 
-  frag.xy = h_k_t_dy;
-  frag.zw = vec2(0.0, 1.0);
+  frag = h_k_t_dy;
 }

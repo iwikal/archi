@@ -4,7 +4,7 @@ use luminance_front::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
     pipeline::{Pipeline, PipelineGate, TextureBinding},
-    pixel::{Floating, RGB32F, RGBA32F},
+    pixel::{Floating, RG32F, RGB32F, RGBA32F},
     shader::{Program, Uniform},
     shading_gate::ShadingGate,
     tess::{Mode, Tess},
@@ -26,7 +26,7 @@ fn quad_tess(context: &mut Context) -> anyhow::Result<Tess<()>> {
 
 #[derive(UniformInterface)]
 struct H0kInterface {
-    input_texture: Uniform<TextureBinding<Dim2, Floating>>,
+    gauss_noise: Uniform<TextureBinding<Dim2, Floating>>,
     n: Uniform<i32>,
     scale: Uniform<i32>,
     amplitude: Uniform<f32>,
@@ -39,9 +39,9 @@ type H0kTexture = Texture<Dim2, RGBA32F>;
 
 struct H0k {
     tess: Tess<()>,
-    noise: Texture<Dim2, RGBA32F>,
+    gauss_noise: Texture<Dim2, RGBA32F>,
     shader: Program<(), (), H0kInterface>,
-    framebuffer: Framebuffer<Dim2, RGBA32F, ()>,
+    pub framebuffer: Framebuffer<Dim2, RGBA32F, ()>,
     scale: i32,
     amplitude: f32,
     intensity: f32, // wind speed
@@ -65,7 +65,9 @@ impl H0k {
             crate::shader_source!("./shaders/h0k.frag"),
         )?;
 
-        let noise = {
+        let gauss_noise = {
+            use std::f32::consts::TAU;
+
             use luminance::texture::{MagFilter, MinFilter, Sampler};
             let sampler = Sampler {
                 mag_filter: MagFilter::Nearest,
@@ -79,7 +81,18 @@ impl H0k {
             let mut rng = rand::thread_rng();
             for _ in 0..length {
                 use rand::Rng;
-                pixels.push(rng.gen());
+                let [a, b, c, d]: [f32; 4] = rng.gen();
+                let a = (-2.0 * a.ln()).sqrt();
+                let b = (-2.0 * b.ln()).sqrt();
+                let c = TAU * c;
+                let d = TAU * d;
+
+                pixels.push((
+                    a * c.cos(),
+                    a * c.sin(),
+                    b * d.cos(),
+                    b * d.sin(),
+                ));
             }
 
             texture.upload(GenMipmaps::No, &pixels)?;
@@ -90,11 +103,11 @@ impl H0k {
 
         Ok(Self {
             tess,
-            noise,
+            gauss_noise,
             shader,
             framebuffer,
             scale: N as _,
-            amplitude: 1.0 / 2.0,
+            amplitude: 100.0,
             intensity: 40.0, // wind speed
             direction: glm::vec2(1.0, 1.0),
             l: 0.5, // capillary supress factor
@@ -107,7 +120,7 @@ impl H0k {
     ) -> anyhow::Result<&mut H0kTexture> {
         let Self {
             framebuffer,
-            noise,
+            gauss_noise,
             shader,
             tess,
             scale,
@@ -123,12 +136,11 @@ impl H0k {
                 &*framebuffer,
                 &Default::default(),
                 |pipeline, mut shader_gate| -> anyhow::Result<()> {
-                    let bound_noise = pipeline.bind_texture(noise)?;
+                    let bound_noise = pipeline.bind_texture(gauss_noise)?;
                     shader_gate.shade(
                         shader,
                         |mut iface, uni, mut render_gate| {
-                            iface
-                                .set(&uni.input_texture, bound_noise.binding());
+                            iface.set(&uni.gauss_noise, bound_noise.binding());
                             iface.set(&uni.n, N as i32);
                             iface.set(&uni.scale, *scale);
                             iface.set(&uni.amplitude, *amplitude);
@@ -160,12 +172,12 @@ struct HktInterface {
     time: Uniform<f32>,
 }
 
-type HktTexture = Texture<Dim2, RGBA32F>;
+type HktTexture = Texture<Dim2, RG32F>;
 
-struct Hkt {
+pub struct Hkt {
     tess: Tess<()>,
     shader: Program<(), (), HktInterface>,
-    framebuffer: Framebuffer<Dim2, RGBA32F, ()>,
+    pub framebuffer: Framebuffer<Dim2, RG32F, ()>,
 }
 
 impl Hkt {
@@ -195,7 +207,7 @@ impl Hkt {
         pipline_gate: &mut PipelineGate,
         time: f32,
         h0k_texture: &mut H0kTexture,
-    ) -> anyhow::Result<&HktTexture> {
+    ) -> anyhow::Result<&mut HktTexture> {
         let Self {
             framebuffer,
             shader,
@@ -244,9 +256,9 @@ type OceanShader = Program<(), (), OceanShaderInterface>;
 
 use crate::fft::{Fft, FftTexture};
 pub struct Ocean {
-    h0k_texture: H0kTexture,
-    hkt: Hkt,
-    fft: Fft,
+    pub h0k_texture: H0kTexture,
+    pub hkt: Hkt,
+    pub fft: Fft,
     shader: OceanShader,
     tess: Tess<(), u32>,
 }
@@ -287,16 +299,22 @@ impl Ocean {
         pipeline_gate: &mut PipelineGate,
         time: f32,
     ) -> anyhow::Result<OceanFrame> {
+        let Self {
+            hkt,
+            h0k_texture,
+            fft,
+            shader,
+            tess,
+        } = self;
+
         let heightmap = {
-            self.hkt
-                .render(pipeline_gate, time, &mut self.h0k_texture)?;
-            self.fft
-                .render(pipeline_gate, self.hkt.framebuffer.color_slot())?
+            let hkt_texture = hkt.render(pipeline_gate, time, h0k_texture)?;
+            fft.render(pipeline_gate, hkt_texture)?
         };
 
         Ok(OceanFrame {
-            shader: &mut self.shader,
-            tess: &mut self.tess,
+            shader,
+            tess,
             heightmap,
         })
     }

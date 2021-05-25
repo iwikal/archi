@@ -2,7 +2,7 @@
 
 in vec2 uv;
 
-uniform sampler2D input_texture;
+uniform sampler2D gauss_noise;
 
 out vec4 frag;
 
@@ -14,21 +14,6 @@ uniform vec2 direction;
 uniform float l; // capillary supress factor
 
 const float g = 9.81;
-
-// Box-Muller-Method
-vec4 gaus_rnd() {
-  vec4 random = clamp(texture(input_texture, uv), 0.001, 1.0);
-
-  vec2 a = sqrt(-2.0 * log(random.rg));
-  vec2 b = TAU * random.ba;
-
-  vec4 rnd;
-  rnd.x = a.x * cos(b.x);
-  rnd.y = a.x * sin(b.x);
-  rnd.z = a.y * cos(b.y);
-  rnd.w = a.y * sin(b.y);
-  return rnd;
-}
 
 float h0(vec2 k) {
   float L_ = (intensity * intensity) / g;
@@ -48,7 +33,7 @@ void main(void) {
   vec2 xy = gl_FragCoord.xy - float(n) / 2.0;
   vec2 k = TAU * xy / scale;
 
-  vec4 gauss_random = gaus_rnd();
-  frag.xy = gauss_random.xy * h0(k);
-  frag.zw = gauss_random.zw * h0(-k);
+  vec4 noise = texture(gauss_noise, uv);
+  frag.xy = noise.xy * h0(k);
+  frag.zw = noise.zw * h0(-k);
 }

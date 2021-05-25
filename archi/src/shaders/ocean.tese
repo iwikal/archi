@@ -4,8 +4,6 @@ layout(quads, fractional_odd_spacing, cw) in;
 
 uniform sampler2D heightmap;
 
-const float SCALE = 8.0;
-
 layout (location = 0) in vec2 uv_in[gl_MaxPatchVertices];
 layout (location = 0) out vec2 uv_out;
 

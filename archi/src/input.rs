@@ -29,6 +29,8 @@ impl Movement {
                 30 => Some(&mut self.left),
                 31 => Some(&mut self.backward),
                 32 => Some(&mut self.right),
+                57 => Some(&mut self.up),
+                42 => Some(&mut self.down),
                 _ => None,
             } {
                 *direction = match state {

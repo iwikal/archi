@@ -1,13 +1,10 @@
 use crate::context::Context;
-use luminance_front::{
-    context::GraphicsContext,
-    pixel::RGBA32F,
-    texture::{Dim2, Texture},
-};
+use crate::fft::FftTexture;
+use luminance_front::{context::GraphicsContext, texture::Texture};
 
 pub struct BlueNoise {
-    pub freq_texture: Texture<Dim2, RGBA32F>,
-    pub noise_texture: Texture<Dim2, RGBA32F>,
+    pub freq_texture: FftTexture,
+    pub noise_texture: FftTexture,
 }
 
 impl BlueNoise {
@@ -27,7 +24,7 @@ impl BlueNoise {
             for x in 0..size {
                 for y in 0..size {
                     pixels.push(match (x, y) {
-                        (0, 0) => (1., 1., 0., 0.),
+                        (0, 0) => (1., 1.),
                         (x, y) => {
                             let scale = 1. / 256.;
                             let x = x as f32 * scale;
@@ -36,7 +33,7 @@ impl BlueNoise {
 
                             let val =
                                 || mag_sq * (rand::random::<f32>() * 2. - 1.);
-                            (val(), val(), val(), val())
+                            (val(), val())
                         }
                     });
                 }

@@ -5,7 +5,7 @@ in vec2 uv;
 uniform sampler2D twiddle_indices;
 uniform sampler2D input_texture;
 
-out vec4 frag;
+out vec2 frag;
 
 uniform int stage;
 uniform int direction;
@@ -32,5 +32,5 @@ void main() {
   // Butterfly operation
   vec2 H = p + cmul(omega, q);
 
-  frag = vec4(H, 0, 1);
+  frag = H;
 }
