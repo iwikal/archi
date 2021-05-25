@@ -167,7 +167,7 @@ impl H0k {
 
 #[derive(UniformInterface)]
 struct HktInterface {
-    input_texture: Uniform<TextureBinding<Dim2, Floating>>,
+    h0k_texture: Uniform<TextureBinding<Dim2, Floating>>,
     n: Uniform<i32>,
     time: Uniform<f32>,
 }
@@ -224,7 +224,7 @@ impl Hkt {
                     shader_gate.shade(
                         shader,
                         |mut iface, uni, mut render_gate| {
-                            iface.set(&uni.input_texture, bound_h0k.binding());
+                            iface.set(&uni.h0k_texture, bound_h0k.binding());
                             iface.set(&uni.n, N as i32);
                             iface.set(&uni.time, time);
                             render_gate

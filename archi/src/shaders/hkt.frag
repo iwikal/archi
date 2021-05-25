@@ -4,7 +4,7 @@
 
 in vec2 uv;
 
-uniform sampler2D input_texture;
+uniform sampler2D h0k_texture;
 
 out vec2 frag;
 
@@ -22,7 +22,7 @@ void main(void) {
 
   float w = sqrt(g * magnitude);
 
-  vec4 h0k = texture(input_texture, uv);
+  vec4 h0k = texture(h0k_texture, uv);
   vec2 fou_amp = h0k.rg;
   vec2 fou_amp_conj = vec2(h0k.b, -h0k.a);
 
