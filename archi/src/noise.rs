@@ -43,9 +43,14 @@ impl BlueNoise {
             texture
         };
 
-        let mut fft = crate::fft::Fft::with_sampler(context, size, sampler)?;
-        fft.render(&mut context.new_pipeline_gate(), &mut freq_texture)?;
-        let noise_texture = fft.into_target_texture();
+        let mut fft = crate::fft::Fft::new(context, size)?;
+        let mut buf = crate::fft::Fft::framebuffer(context, size)?;
+        fft.render(
+            &mut context.new_pipeline_gate(),
+            &mut freq_texture,
+            &mut buf,
+        )?;
+        let noise_texture = buf.into_color_slot();
 
         Ok(Self {
             freq_texture,

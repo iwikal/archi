@@ -6,7 +6,9 @@ in vec2 uv;
 
 uniform sampler2D h0k_texture;
 
-out vec2 frag;
+out vec2 hkt_dx;
+out vec2 hkt_dy;
+out vec2 hkt_dz;
 
 uniform int n = 512;
 uniform int scale = 1000;
@@ -34,15 +36,13 @@ void main(void) {
   vec2 exp_iwt_inv = vec2(cosinus, -sinus);
 
   // dy
-  vec2 h_k_t_dy = cmul(fou_amp, exp_iwt) + cmul(fou_amp_conj, exp_iwt_inv);
+  hkt_dy = cmul(fou_amp, exp_iwt) + cmul(fou_amp_conj, exp_iwt_inv);
 
   // dx
   vec2 dx = vec2(0.0, -k.x / magnitude);
-  vec2 h_k_t_dx = cmul(dx, h_k_t_dy);
+  hkt_dx = cmul(dx, hkt_dy);
 
   // dz
-  vec2 dy = vec2(0.0, -k.y / magnitude);
-  vec2 h_k_t_dz = cmul(dy, h_k_t_dy);
-
-  frag = h_k_t_dy;
+  vec2 dz = vec2(0.0, -k.y / magnitude);
+  hkt_dz = cmul(dz, hkt_dy);
 }

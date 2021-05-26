@@ -107,10 +107,10 @@ impl H0k {
             shader,
             framebuffer,
             scale: N as _,
-            amplitude: 100.0,
-            intensity: 40.0, // wind speed
+            amplitude: 100. / 2.,
+            intensity: 80.0, // wind speed
             direction: glm::vec2(1.0, 1.0),
-            l: 0.5, // capillary supress factor
+            l: 0.5,
         })
     }
 
@@ -177,7 +177,7 @@ type HktTexture = Texture<Dim2, RG32F>;
 pub struct Hkt {
     tess: Tess<()>,
     shader: Program<(), (), HktInterface>,
-    pub framebuffer: Framebuffer<Dim2, RG32F, ()>,
+    pub framebuffer: Framebuffer<Dim2, (RG32F, RG32F, RG32F), ()>,
 }
 
 impl Hkt {
@@ -207,7 +207,7 @@ impl Hkt {
         pipline_gate: &mut PipelineGate,
         time: f32,
         h0k_texture: &mut H0kTexture,
-    ) -> anyhow::Result<&mut HktTexture> {
+    ) -> anyhow::Result<[&mut HktTexture; 3]> {
         let Self {
             framebuffer,
             shader,
@@ -237,13 +237,20 @@ impl Hkt {
             )
             .into_result()?;
 
-        Ok(framebuffer.color_slot())
+        let (x, y, z) = framebuffer.color_slot();
+        Ok([x, y, z])
     }
 }
 
 #[derive(UniformInterface)]
 pub struct OceanShaderInterface {
-    heightmap: Uniform<TextureBinding<Dim2, Floating>>,
+    #[uniform(unbound)]
+    xmap: Uniform<TextureBinding<Dim2, Floating>>,
+    #[uniform(unbound)]
+    ymap: Uniform<TextureBinding<Dim2, Floating>>,
+    #[uniform(unbound)]
+    zmap: Uniform<TextureBinding<Dim2, Floating>>,
+
     view_projection: Uniform<[[f32; 4]; 4]>,
     camera_offset: Uniform<[f32; 2]>,
 
@@ -254,10 +261,11 @@ pub struct OceanShaderInterface {
 
 type OceanShader = Program<(), (), OceanShaderInterface>;
 
-use crate::fft::{Fft, FftTexture};
+use crate::fft::{Fft, FftFramebuffer, FftTexture};
 pub struct Ocean {
     pub h0k_texture: H0kTexture,
     pub hkt: Hkt,
+    offset_buffers: [FftFramebuffer; 3],
     pub fft: Fft,
     shader: OceanShader,
     tess: Tess<(), u32>,
@@ -269,6 +277,11 @@ impl Ocean {
         h0k.render(&mut context.new_pipeline_gate())?;
 
         let hkt = Hkt::new(context)?;
+        let offset_buffers = [
+            Fft::framebuffer(context, N)?,
+            Fft::framebuffer(context, N)?,
+            Fft::framebuffer(context, N)?,
+        ];
         let fft = Fft::new(context, N)?;
         let shader = crate::shader::from_sources(
             context,
@@ -288,6 +301,7 @@ impl Ocean {
         Ok(Self {
             h0k_texture,
             hkt,
+            offset_buffers,
             fft,
             shader,
             tess,
@@ -300,22 +314,28 @@ impl Ocean {
         time: f32,
     ) -> anyhow::Result<OceanFrame> {
         let Self {
-            hkt,
             h0k_texture,
+            hkt,
+            offset_buffers,
             fft,
             shader,
             tess,
         } = self;
 
-        let heightmap = {
-            let hkt_texture = hkt.render(pipeline_gate, time, h0k_texture)?;
-            fft.render(pipeline_gate, hkt_texture)?
+        let offset_maps = {
+            let [hkt_x, hkt_y, hkt_z] =
+                hkt.render(pipeline_gate, time, h0k_texture)?;
+            let [xmap, ymap, zmap] = offset_buffers;
+            let xmap = fft.render(pipeline_gate, hkt_x, xmap)?;
+            let ymap = fft.render(pipeline_gate, hkt_y, ymap)?;
+            let zmap = fft.render(pipeline_gate, hkt_z, zmap)?;
+            [xmap, ymap, zmap]
         };
 
         Ok(OceanFrame {
             shader,
             tess,
-            heightmap,
+            offset_maps,
         })
     }
 }
@@ -323,7 +343,7 @@ impl Ocean {
 pub struct OceanFrame<'a> {
     shader: &'a mut OceanShader,
     tess: &'a mut Tess<(), u32>,
-    pub heightmap: &'a mut FftTexture,
+    pub offset_maps: [&'a mut FftTexture; 3],
 }
 
 impl<'a> OceanFrame<'a> {
@@ -339,14 +359,18 @@ impl<'a> OceanFrame<'a> {
         let Self {
             shader,
             tess,
-            heightmap,
+            offset_maps: [xmap, ymap, zmap],
         } = self;
 
-        let heightmap = pipeline.bind_texture(heightmap)?;
+        let xmap = pipeline.bind_texture(xmap)?;
+        let ymap = pipeline.bind_texture(ymap)?;
+        let zmap = pipeline.bind_texture(zmap)?;
 
         shader_gate.shade(shader, |mut iface, uni, mut render_gate| {
             iface.set(&uni.view_projection, view_projection.into());
-            iface.set(&uni.heightmap, heightmap.binding());
+            iface.set(&uni.xmap, xmap.binding());
+            iface.set(&uni.ymap, ymap.binding());
+            iface.set(&uni.zmap, zmap.binding());
 
             iface.set(&uni.camera_pos, camera_pos.into());
             if let Some(texture) = sky_texture {

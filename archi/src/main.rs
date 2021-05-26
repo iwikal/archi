@@ -194,7 +194,9 @@ fn draw(
                 };
 
                 if let Some(frame) = &mut ocean_frame {
-                    debug(frame.heightmap)?;
+                    for map in frame.offset_maps.iter_mut() {
+                        debug(*map)?;
+                    }
                 }
                 debug(&mut blue_noise.freq_texture)?;
                 debug(&mut blue_noise.noise_texture)?;

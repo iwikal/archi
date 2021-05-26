@@ -8,7 +8,7 @@ out vec4 frag;
 
 uniform vec3 camera_pos;
 
-uniform sampler2D heightmap;
+uniform sampler2D ymap;
 uniform sampler2D sky_texture;
 uniform float exposure;
 
@@ -26,16 +26,16 @@ vec3 sobel_normal() {
   // |     |     |
   // z5 -- z6 -- z7
 
-  float texel = 1.0 / textureSize(heightmap, 0).x;
+  float texel = 1.0 / textureSize(ymap, 0).x;
 
-  float z0 = texture(heightmap, uv + vec2(-texel, -texel)).r;
-  float z1 = texture(heightmap, uv + vec2(     0, -texel)).r;
-  float z2 = texture(heightmap, uv + vec2( texel, -texel)).r;
-  float z3 = texture(heightmap, uv + vec2(-texel,      0)).r;
-  float z4 = texture(heightmap, uv + vec2( texel,      0)).r;
-  float z5 = texture(heightmap, uv + vec2(-texel,  texel)).r;
-  float z6 = texture(heightmap, uv + vec2(     0,  texel)).r;
-  float z7 = texture(heightmap, uv + vec2( texel,  texel)).r;
+  float z0 = texture(ymap, uv + vec2(-texel, -texel)).r;
+  float z1 = texture(ymap, uv + vec2(     0, -texel)).r;
+  float z2 = texture(ymap, uv + vec2( texel, -texel)).r;
+  float z3 = texture(ymap, uv + vec2(-texel,      0)).r;
+  float z4 = texture(ymap, uv + vec2( texel,      0)).r;
+  float z5 = texture(ymap, uv + vec2(-texel,  texel)).r;
+  float z6 = texture(ymap, uv + vec2(     0,  texel)).r;
+  float z7 = texture(ymap, uv + vec2( texel,  texel)).r;
 
   vec3 normal;
 

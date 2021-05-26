@@ -100,30 +100,35 @@ pub struct Fft {
     twiddle_indices: TwiddleTexture,
     butterfly_shader: Program<(), (), ButterflyInterface>,
     inversion_shader: Program<(), (), InversionInterface>,
-    pingpong_buffers: [FftFramebuffer; 2],
+    ping_buffer: FftFramebuffer,
     tess: Tess<()>,
 }
 
 impl Fft {
-    pub fn new(context: &mut Context, width: u32) -> anyhow::Result<Self> {
+    pub fn framebuffer(
+        context: &mut Context,
+        width: u32,
+    ) -> anyhow::Result<FftFramebuffer> {
+        Ok(context.new_framebuffer(
+            [width, width],
+            0,
+            Self::default_sampler(),
+        )?)
+    }
+
+    fn default_sampler() -> Sampler {
         use luminance_front::texture::{MagFilter, MinFilter, Wrap};
 
-        let sampler = Sampler {
+        Sampler {
             wrap_s: Wrap::Repeat,
             wrap_t: Wrap::Repeat,
             mag_filter: MagFilter::Linear,
             min_filter: MinFilter::LinearMipmapLinear,
             ..Default::default()
-        };
-
-        Self::with_sampler(context, width, sampler)
+        }
     }
 
-    pub fn with_sampler(
-        context: &mut Context,
-        width: u32,
-        sampler: Sampler,
-    ) -> anyhow::Result<Self> {
+    pub fn new(context: &mut Context, width: u32) -> anyhow::Result<Self> {
         let twiddle_indices = twiddle_indices(context, width)?;
 
         let butterfly_shader = crate::shader::from_sources(
@@ -142,10 +147,7 @@ impl Fft {
             crate::shader_source!("./shaders/inversion.frag"),
         )?;
 
-        let pingpong_buffers = [
-            context.new_framebuffer([width, width], 0, sampler)?,
-            context.new_framebuffer([width, width], 0, sampler)?,
-        ];
+        let ping_buffer = Self::framebuffer(context, width)?;
 
         let tess = context
             .new_tess()
@@ -158,32 +160,30 @@ impl Fft {
             twiddle_indices,
             butterfly_shader,
             inversion_shader,
-            pingpong_buffers,
+            ping_buffer,
             tess,
         })
     }
 
-    pub fn render<'a>(
-        &'a mut self,
+    pub fn render<'o>(
+        &mut self,
         pipeline_gate: &mut PipelineGate,
         freq_texture: &mut FftTexture,
-    ) -> anyhow::Result<&'a mut FftTexture> {
+        output_buffer: &'o mut FftFramebuffer,
+    ) -> anyhow::Result<&'o mut FftTexture> {
         let Self {
             width,
             tess,
             twiddle_indices,
             butterfly_shader,
             inversion_shader,
-            pingpong_buffers,
+            ping_buffer,
             ..
         } = self;
 
         let stages = 31 - u32::leading_zeros(*width);
 
-        let mut pingpong_buffers = {
-            let [ping, pong] = pingpong_buffers;
-            [ping, pong]
-        };
+        let mut pingpong_buffers = [ping_buffer, output_buffer];
 
         let mut initial_texture = Some(freq_texture);
 
@@ -191,11 +191,8 @@ impl Fft {
             for stage in 0..stages {
                 let [in_buffer, out_buffer] = pingpong_buffers;
 
-                let texture = match initial_texture {
-                    Some(t) => {
-                        initial_texture = None;
-                        t
-                    }
+                let texture = match initial_texture.take() {
+                    Some(t) => t,
                     None => in_buffer.color_slot(),
                 };
 
@@ -263,13 +260,8 @@ impl Fft {
                     },
                 )
                 .into_result()?;
-
-            Ok(out_buffer.color_slot())
         }
-    }
 
-    pub fn into_target_texture(self) -> FftTexture {
-        let [_, buf] = self.pingpong_buffers;
-        buf.into_color_slot()
+        Ok(output_buffer.color_slot())
     }
 }

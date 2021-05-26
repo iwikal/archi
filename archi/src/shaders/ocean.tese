@@ -2,7 +2,9 @@
 
 layout(quads, fractional_odd_spacing, cw) in;
 
-uniform sampler2D heightmap;
+uniform sampler2D xmap;
+uniform sampler2D ymap;
+uniform sampler2D zmap;
 
 layout (location = 0) in vec2 uv_in[gl_MaxPatchVertices];
 layout (location = 0) out vec2 uv_out;
@@ -49,16 +51,19 @@ void main() {
       uv_in[3]);
   uv_out /= 2.0;
 
-  float height = 0.0;
-  height += texture(heightmap, uv_out).x;
+  vec3 displacement = vec3(0);
+  displacement.x -= texture(xmap, uv_out).x;
+  displacement.y += texture(ymap, uv_out).x;
+  displacement.z -= texture(zmap, uv_out).x;
 
   gl_Position = grid_position;
-  gl_Position.y += height;
+  gl_Position.xyz += displacement;
 
   position_out = interpolate(
       position_in[0],
       position_in[1],
       position_in[2],
       position_in[3]);
-  position_out.y += height;
+
+  position_out.xyz += displacement;
 }
