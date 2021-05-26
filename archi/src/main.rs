@@ -3,7 +3,7 @@ extern crate nalgebra_glm as glm;
 
 use anyhow::Context as _;
 use glutin::{
-    event::{DeviceEvent, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
 use luminance_front::context::GraphicsContext;
@@ -50,7 +50,7 @@ fn main() -> anyhow::Result<()> {
         blue_noise: noise::BlueNoise::new(&mut context)?,
         back_buffer: context.back_buffer(surface.size())?,
         camera: camera::Camera::new(width, height),
-        movement: input::Movement::default(),
+        input: input::Input::default(),
         skybox: skybox::Skybox::new(&mut context)?,
         ocean: ocean::Ocean::new(&mut context)?,
         exposure: 0.2,
@@ -80,7 +80,7 @@ fn main() -> anyhow::Result<()> {
             Event::MainEventsCleared => {
                 let now = std::time::Instant::now();
                 let delta_t = now - last_input_read;
-                state.camera.take_input(&state.movement);
+                state.camera.take_input(&state.input);
                 let delta_f = delta_t.as_micros() as f32 / 1_000_000.0;
                 state.camera.physics_tick(delta_f);
                 last_input_read = now;
@@ -122,7 +122,7 @@ struct AppState {
     back_buffer: context::BackBuffer,
     camera: camera::Camera,
     exposure: f32,
-    movement: input::Movement,
+    input: input::Input,
     ocean: ocean::Ocean,
     render_water: bool,
     skybox: skybox::Skybox,
@@ -216,26 +216,10 @@ fn draw(
 }
 
 fn input(event: &Event<()>, state: &mut AppState) -> ControlFlow {
-    state.movement.update(&event);
+    state.input.update(event);
+    state.exposure *= 2.0_f32.powf(state.input.mouse().scroll());
 
     match event {
-        Event::DeviceEvent { event, .. } => match event {
-            &DeviceEvent::MouseMotion { delta: (x, y) } => {
-                state.camera.mouse_moved(x, y);
-            }
-            DeviceEvent::MouseWheel { delta, .. } => {
-                let y = match delta {
-                    glutin::event::MouseScrollDelta::LineDelta(_x, y) => {
-                        y / 10.0
-                    }
-                    glutin::event::MouseScrollDelta::PixelDelta(pos) => {
-                        pos.x as f32 / 100.0
-                    }
-                };
-                state.exposure *= 2.0_f32.powf(y);
-            }
-            _ => {}
-        },
         Event::WindowEvent {
             event:
                 WindowEvent::KeyboardInput {
@@ -259,7 +243,7 @@ fn input(event: &Event<()>, state: &mut AppState) -> ControlFlow {
             _ => {}
         },
         Event::MainEventsCleared => {
-            state.camera.take_input(&state.movement);
+            state.camera.take_input(&state.input);
         }
         _ => {}
     }

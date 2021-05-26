@@ -34,7 +34,7 @@ impl Camera {
         self.projection = glm::infinite_perspective_rh_no(aspect, fov, near);
     }
 
-    pub fn mouse_moved(&mut self, x: f64, y: f64) {
+    fn mouse_moved(&mut self, x: f64, y: f64) {
         let scale = 1.0 / 128.0;
         self.yaw -= (x * scale) as f32;
         self.pitch -= (y * scale) as f32;
@@ -43,8 +43,8 @@ impl Camera {
             glm::Mat4::from_euler_angles(self.pitch, self.yaw, 0.0);
     }
 
-    pub fn take_input(&mut self, movement: &crate::input::Movement) {
-        let (x, y, z) = movement.axes();
+    pub fn take_input(&mut self, input: &crate::input::Input) {
+        let (x, y, z) = input.movement().axes();
 
         let (x, z) = (
             // Map x and z from square to disc
@@ -59,6 +59,9 @@ impl Camera {
         move_vector /= length;
 
         self.acceleration = SPEED * glm::rotate_y_vec3(&move_vector, self.yaw);
+
+        let (x, y) = input.mouse().delta_axes();
+        self.mouse_moved(x as _, y as _);
     }
 
     pub fn physics_tick(&mut self, delta_t: f32) {
