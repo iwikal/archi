@@ -26,7 +26,7 @@ float h0(vec2 k) {
     exp(-1.0 / (mag_sq * L_ * L_)) *
     exp(-mag_sq * l * l);
 
-  return clamp(sqrt(phillips_k) / sqrt(2.0), -4000.0, 4000.0);
+  return clamp(sqrt(phillips_k / 2.0), -4000.0, 4000.0);
 }
 
 void main(void) {

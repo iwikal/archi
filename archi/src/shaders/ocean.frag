@@ -8,7 +8,9 @@ out vec4 frag;
 
 uniform vec3 camera_pos;
 
-uniform sampler2D ymap;
+uniform sampler2D displacement_map;
+uniform sampler2D gradient_jacobian_map;
+
 uniform sampler2D sky_texture;
 uniform float exposure;
 
@@ -26,16 +28,16 @@ vec3 sobel_normal() {
   // |     |     |
   // z5 -- z6 -- z7
 
-  float texel = 1.0 / textureSize(ymap, 0).x;
+  float texel = 1.0 / textureSize(displacement_map, 0).x;
 
-  float z0 = texture(ymap, uv + vec2(-texel, -texel)).r;
-  float z1 = texture(ymap, uv + vec2(     0, -texel)).r;
-  float z2 = texture(ymap, uv + vec2( texel, -texel)).r;
-  float z3 = texture(ymap, uv + vec2(-texel,      0)).r;
-  float z4 = texture(ymap, uv + vec2( texel,      0)).r;
-  float z5 = texture(ymap, uv + vec2(-texel,  texel)).r;
-  float z6 = texture(ymap, uv + vec2(     0,  texel)).r;
-  float z7 = texture(ymap, uv + vec2( texel,  texel)).r;
+  float z0 = texture(displacement_map, uv + vec2(-texel, -texel)).y;
+  float z1 = texture(displacement_map, uv + vec2(     0, -texel)).y;
+  float z2 = texture(displacement_map, uv + vec2( texel, -texel)).y;
+  float z3 = texture(displacement_map, uv + vec2(-texel,      0)).y;
+  float z4 = texture(displacement_map, uv + vec2( texel,      0)).y;
+  float z5 = texture(displacement_map, uv + vec2(-texel,  texel)).y;
+  float z6 = texture(displacement_map, uv + vec2(     0,  texel)).y;
+  float z7 = texture(displacement_map, uv + vec2( texel,  texel)).y;
 
   vec3 normal;
 
@@ -47,6 +49,8 @@ vec3 sobel_normal() {
 }
 
 void main() {
+  float jacobian = texture(gradient_jacobian_map, uv).b;
+
   vec3 world_normal = sobel_normal();
   vec3 look_dir = normalize(camera_pos - position);
 
@@ -63,4 +67,8 @@ void main() {
   frag.rgb += reflection;
 
   frag.a = 1.0;
+
+  frag.rgb = vec3(jacobian);
+  frag.rgb = mix(frag.rgb, vec3(1), float(mod(uv.x, 1.0/128.0) < 0.0001));
+  frag.rgb = mix(frag.rgb, vec3(1), float(mod(uv.y, 1.0/128.0) < 0.0001));
 }

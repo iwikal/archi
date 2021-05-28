@@ -6,9 +6,9 @@ in vec2 uv;
 
 uniform sampler2D h0k_texture;
 
-out vec2 hkt_dx;
-out vec2 hkt_dy;
-out vec2 hkt_dz;
+out vec2 displacement_x;
+out vec2 displacement_y;
+out vec2 displacement_z;
 
 uniform int n = 512;
 uniform int scale = 1000;
@@ -28,21 +28,21 @@ void main(void) {
   vec2 fou_amp = h0k.rg;
   vec2 fou_amp_conj = vec2(h0k.b, -h0k.a);
 
-  float cosinus = cos(w * time);
-  float sinus   = sin(w * time);
+  float cosine = cos(w * time);
+  float sine   = sin(w * time);
 
   // euler formula
-  vec2 exp_iwt = vec2(cosinus, sinus);
-  vec2 exp_iwt_inv = vec2(cosinus, -sinus);
+  vec2 exp_iwt = vec2(cosine, sine);
+  vec2 exp_iwt_inv = vec2(cosine, -sine);
 
   // dy
-  hkt_dy = cmul(fou_amp, exp_iwt) + cmul(fou_amp_conj, exp_iwt_inv);
+  displacement_y = cmul(fou_amp, exp_iwt) + cmul(fou_amp_conj, exp_iwt_inv);
 
   // dx
   vec2 dx = vec2(0.0, -k.x / magnitude);
-  hkt_dx = cmul(dx, hkt_dy);
+  displacement_x = cmul(dx, displacement_y);
 
   // dz
   vec2 dz = vec2(0.0, -k.y / magnitude);
-  hkt_dz = cmul(dz, hkt_dy);
+  displacement_z = cmul(dz, displacement_y);
 }

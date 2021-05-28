@@ -2,9 +2,11 @@
 
 layout(quads, fractional_odd_spacing, cw) in;
 
-uniform sampler2D xmap;
-uniform sampler2D ymap;
-uniform sampler2D zmap;
+uniform sampler2D displacement_map;
+
+uniform mat4 view_projection;
+
+uniform float time = 0;
 
 layout (location = 0) in vec2 uv_in[gl_MaxPatchVertices];
 layout (location = 0) out vec2 uv_out;
@@ -34,30 +36,15 @@ vec4 interpolate(vec4 a, vec4 b, vec4 c, vec4 d) {
 }
 
 void main() {
-  // world position
-  vec4 p1 = mix(gl_in[1].gl_Position, gl_in[0].gl_Position, gl_TessCoord.x);
-  vec4 p2 = mix(gl_in[2].gl_Position, gl_in[3].gl_Position, gl_TessCoord.x);
-
-  vec4 grid_position = interpolate(
-      gl_in[0].gl_Position,
-      gl_in[1].gl_Position,
-      gl_in[2].gl_Position,
-      gl_in[3].gl_Position);
-
   uv_out = interpolate(
       uv_in[0],
       uv_in[1],
       uv_in[2],
       uv_in[3]);
-  uv_out /= 2.0;
 
   vec3 displacement = vec3(0);
-  displacement.x -= texture(xmap, uv_out).x;
-  displacement.y += texture(ymap, uv_out).x;
-  displacement.z -= texture(zmap, uv_out).x;
-
-  gl_Position = grid_position;
-  gl_Position.xyz += displacement;
+  displacement += texture(displacement_map, uv_out).xyz;
+  displacement.y = 0;
 
   position_out = interpolate(
       position_in[0],
@@ -66,4 +53,9 @@ void main() {
       position_in[3]);
 
   position_out.xyz += displacement;
+
+  gl_Position.xyz = position_out + displacement;
+  gl_Position.w = 1;
+
+  gl_Position = view_projection * gl_Position;
 }

@@ -172,16 +172,17 @@ fn draw(
                         camera.position(),
                         Some(&mut skybox.sky_texture),
                         *exposure,
+                        false,
                     )?;
                 }
 
                 use luminance_front::{
-                    pixel::RG32F,
+                    pixel::{RG32F, RGB32F},
                     texture::{Dim2, Texture},
                 };
 
                 let mut offset = -0.5;
-                let mut debug = |texture: &mut Texture<Dim2, RG32F>| {
+                let mut debug = |texture: &mut Texture<Dim2, RGB32F>| {
                     let result = debugger.render(
                         &pipeline,
                         &mut shader_gate,
@@ -194,10 +195,22 @@ fn draw(
                 };
 
                 if let Some(frame) = &mut ocean_frame {
-                    for map in frame.offset_maps.iter_mut() {
-                        debug(*map)?;
-                    }
+                    debug(frame.displacement_map)?;
+                    debug(frame.gradient_jacobian_map)?;
                 }
+
+                let mut debug = |texture: &mut Texture<Dim2, RG32F>| {
+                    let result = debugger.render(
+                        &pipeline,
+                        &mut shader_gate,
+                        view_projection,
+                        glm::translation(&glm::Vec3::new(offset, 1., -2.)),
+                        Some(texture),
+                    );
+                    offset += 1.0;
+                    result
+                };
+
                 debug(&mut blue_noise.freq_texture)?;
                 debug(&mut blue_noise.noise_texture)?;
 
